@@ -257,8 +257,18 @@ QList<QgsVectorLayer*> embeddedReferenceLayers(QgsProject* project, const QStrin
   return out;
 }
 
+void ensureGdalDrivers() {
+  static const bool s_reg = [] {
+    GDALAllRegister();
+    OGRRegisterAll();
+    return true;
+  }();
+  Q_UNUSED(s_reg);
+}
+
 bool dropGpkgTables(const QString& gpkgPath, const QStringList& tables, QString* errorOut) {
   if (tables.isEmpty()) return true;
+  ensureGdalDrivers();
   GDALDatasetH ds =
       GDALOpenEx(gpkgPath.toUtf8().constData(), GDAL_OF_VECTOR | GDAL_OF_UPDATE, nullptr, nullptr, nullptr);
   if (!ds) {
@@ -291,6 +301,7 @@ bool dropGpkgTables(const QString& gpkgPath, const QStringList& tables, QString*
 
 QSet<QString> existingGpkgLayerNames(const QString& gpkgPath) {
   QSet<QString> names;
+  ensureGdalDrivers();
   GDALDatasetH ds = GDALOpenEx(gpkgPath.toUtf8().constData(), GDAL_OF_VECTOR, nullptr, nullptr, nullptr);
   if (!ds) return names;
   const int n = GDALDatasetGetLayerCount(ds);
@@ -344,6 +355,7 @@ QString projectUri(const QString& gpkgPath) {
 
 bool hasEmbeddedProject(const QString& gpkgPath) {
   if (gpkgPath.isEmpty() || !QFileInfo::exists(gpkgPath)) return false;
+  ensureGdalDrivers();
   GDALDatasetH ds = GDALOpenEx(gpkgPath.toUtf8().constData(), GDAL_OF_VECTOR, nullptr, nullptr, nullptr);
   if (!ds) return false;
   // QGIS는 내장 프로젝트를 qgis_projects 테이블에 넣는다. 지오메트리가 없는 테이블이라
@@ -361,6 +373,7 @@ bool hasEmbeddedProject(const QString& gpkgPath) {
 
 bool validateForOpen(const QString& gpkgPath, QString* errorOut) {
   if (errorOut) errorOut->clear();
+  ensureGdalDrivers();
   const char* drivers[] = {"GPKG", nullptr};
   GDALDatasetH dataset =
       GDALOpenEx(gpkgPath.toUtf8().constData(), GDAL_OF_VECTOR | GDAL_OF_READONLY, drivers, nullptr, nullptr);
@@ -458,6 +471,7 @@ bool copySurvey(const QString& sourceGpkg, const QString& targetGpkg, QString* e
   QTemporaryDir temporary(target.dir().filePath(QStringLiteral(".ka-survey-copy-XXXXXX")));
   if (!temporary.isValid()) return fail(QStringLiteral("저장 폴더에 임시 사본을 만들 수 없습니다."));
   const QString snapshot = temporary.filePath(QStringLiteral("survey.gpkg"));
+  ensureGdalDrivers();
   GDALDatasetH dataset =
       GDALOpenEx(source.absoluteFilePath().toUtf8().constData(), GDAL_OF_VECTOR, nullptr, nullptr, nullptr);
   if (!dataset) return fail(QStringLiteral("원본 조사 파일을 읽을 수 없습니다."));

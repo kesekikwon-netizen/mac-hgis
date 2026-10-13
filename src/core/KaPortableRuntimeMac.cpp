@@ -14,10 +14,10 @@ void discoverMac(KaPortablePaths& out, const QDir& app) {
     out.qtPlugins = QStringLiteral("/opt/homebrew/share/qt/plugins");
   }
 
-  if (QDir(QStringLiteral("/Applications/QGIS.app/Contents/MacOS")).exists()) {
-    out.qgisPrefix = QStringLiteral("/Applications/QGIS.app/Contents/MacOS");
-    if (QDir(QStringLiteral("/Applications/QGIS.app/Contents/PlugIns")).exists()) {
-      out.qgisPlugins = QStringLiteral("/Applications/QGIS.app/Contents/PlugIns");
+  if (QDir(QStringLiteral("/Applications/QGIS.app")).exists()) {
+    out.qgisPrefix = QStringLiteral("/Applications/QGIS.app");
+    if (QDir(QStringLiteral("/Applications/QGIS.app/Contents/PlugIns/qgis")).exists()) {
+      out.qgisPlugins = QStringLiteral("/Applications/QGIS.app/Contents/PlugIns/qgis");
     }
   }
 

@@ -11,6 +11,8 @@
 #include "KaUserError.h"
 #include "MainWindow.h"
 #include "core/KaSessionLog.h"
+#include <gdal.h>
+#include <ogrsf_frmts.h>
 #include <cstdlib>
 #include <functional>
 #include <memory>
@@ -264,8 +266,8 @@ QString KaApplication::resolvePrefixPath() {
     QString p = QString::fromUtf8(e);
     if (QDir(p).exists()) return p;
   }
-  if (QDir(QStringLiteral("/Applications/QGIS.app/Contents/MacOS")).exists()) {
-    return QStringLiteral("/Applications/QGIS.app/Contents/MacOS");
+  if (QDir(QStringLiteral("/Applications/QGIS.app")).exists()) {
+    return QStringLiteral("/Applications/QGIS.app");
   }
 #endif
   if (const char* e = std::getenv("QGIS_PREFIX_PATH")) {
@@ -792,9 +794,9 @@ int KaApplication::run(int argc, char** argv) {
     return 2;
   }
   QgsApplication::setPrefixPath(prefix, true);
-  QgsApplication::setPluginPath(prefix + QStringLiteral("/plugins"));
-  QgsApplication::setPkgDataPath(prefix);
   QgsApplication::initQgis();
+  GDALAllRegister();
+  OGRRegisterAll();
   installQtKoreanTranslator(app, prefix);
   // GDAL failures reach the session log too; a desktop launch has no console.
   KaGdalErrorLog::install();
