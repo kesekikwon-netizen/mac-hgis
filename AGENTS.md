@@ -84,3 +84,12 @@ ctest --test-dir build --output-on-failure
 # Launch the macOS application
 open build/ka-hgis.app
 ```
+
+---
+
+## 6. Continuous Auto Commit & Push Policy (매 단계 자동 커밋 및 푸시)
+- **Autonomous Auto Commit & Push**:
+  - 모든 기능 구현, 버그 수정, 설정 변경 및 리팩토링의 각 단계가 완료될 때마다 반드시 자체 빌드(`cmake --build build`)와 테스트(`ctest`) 검증을 거친 후, **자율적으로 `git commit` 및 `git push origin main`을 즉시 실행**한다.
+  - 사용자에게 커밋/푸시 여부를 묻지 않고 완료 시점마다 자동으로 동기화하여 변경 사항이 유실되지 않도록 보장한다.
+  - 커밋 메시지는 Conventional Commits 표준(`feat:`, `fix:`, `refactor:`, `test:`, `docs:`)을 준수한다.
+
