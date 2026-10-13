@@ -7,13 +7,16 @@ This document defines project conventions, architecture, tooling, and specialize
 
 ## 1. Project Overview & Identity
 - **Name**: `ka-hgis` (v0.3+)
-- **Target Platform**: macOS (Apple Silicon `arm64` & Universal, macOS 14+)
-- **Language**: C++20 (AppleClang)
+- **Target Platform**: macOS (Apple Silicon `arm64` & Universal, macOS 14+) & Windows 10/11 (`x64`, MSVC 2022)
+- **Language**: C++20 (AppleClang on Mac, MSVC 2022 on Windows)
 - **Frameworks**:
   - **Qt 6**: UI framework, Widgets, Painting, Event loop, Multimedia, Network, SVG
-  - **QGIS 4.x Libraries**: `qgis_core`, `qgis_gui`, `qgis_analysis`, `qgis_3d` (`/Applications/QGIS.app/Contents/Frameworks`)
+  - **QGIS 4.x Libraries**: `qgis_core`, `qgis_gui`, `qgis_analysis`, `qgis_3d` (macOS: `/Applications/QGIS.app`, Windows: `C:\OSGeo4W\apps\qgis-dev`)
   - **GDAL 3.x / PROJ / GEOS**: Geodata processing, Coordinate Transformations (EPSG:5179, 5186, 5187)
-- **Output Artifact**: macOS Native Application Bundle (`ka-hgis.app`)
+- **Output Artifacts**:
+  - macOS: Native Application Bundle (`ka-hgis.app`)
+  - Windows: Native Executable & Portable Bundle (`ka-hgis.exe` + `dist/ka-hgis-portable`)
+- **Windows Architecture & Build Manual**: [`docs/WINDOWS_BUILD_GUIDE.md`](docs/WINDOWS_BUILD_GUIDE.md)
 
 ---
 
@@ -61,13 +64,16 @@ When executing tasks in this codebase, delegate to or invoke the following speci
 | Subagent | Role | Responsibilities |
 |---|---|---|
 | `mac_cmake_builder` | CMake & Build Architect | `CMakeLists.txt`, AppleClang flags, ccache, Ninja, `.app` bundle, `@rpath` setup |
+| `win_build_specialist` | Windows MSVC Architect | Visual Studio 2022, MSVC v143 flags, OSGeo4W, `CMakePresets.json`, DPAPI, PowerShell |
 | `qgis_sdk_integrator` | QGIS & GIS SDK Integrator | QGIS 4.x header tree, `/Applications/QGIS.app` dylibs, GDAL/PROJ linking, dynamic loader paths |
 | `mac_native_adapter` | macOS Platform Specialist | Mac Keychain (`KaSecretStore`), POSIX file locking (`SurveyDurability`), Retina UI, Cmd shortcuts |
-| `mac_gis_tester` | Quality & CI Engineer | CTest execution, headless smoke-quit, 18-rule checklist verification, GitHub Actions macOS CI |
+| `mac_gis_tester` | Quality & CI Engineer | CTest execution, headless smoke-quit, 18-rule checklist verification, GitHub Actions CI |
 
 ---
 
 ## 5. Build & Run Procedures
+
+### macOS (Apple Silicon / Clang)
 ```bash
 # Configure with Ninja + ccache + Clang
 cmake -B build -G Ninja \
@@ -75,15 +81,30 @@ cmake -B build -G Ninja \
   -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
   -DKA_HGIS_BUILD_TESTS=ON
 
-# Build
+# Build & Test
 cmake --build build
-
-# Run unit tests
 ctest --test-dir build --output-on-failure
 
 # Launch the macOS application
 open build/ka-hgis.app
 ```
+
+### Windows 10/11 (Visual Studio 2022 / MSVC x64)
+```powershell
+# 1-Click Bootstrap (Dependencies, Configure, Build, CTest, Smoke)
+.\scripts\bootstrap-dev-pc.ps1
+
+# Manual Developer Build
+. .\scripts\dev-env.ps1
+cmake --preset vs
+cmake --build build --config Release --parallel
+ctest --test-dir build -C Release --output-on-failure
+.\scripts\run-ka-hgis.ps1
+
+# Portable Delivery Packaging
+.\scripts\make-portable.ps1
+```
+*Full Windows Details*: [`docs/WINDOWS_BUILD_GUIDE.md`](docs/WINDOWS_BUILD_GUIDE.md)
 
 ---
 
