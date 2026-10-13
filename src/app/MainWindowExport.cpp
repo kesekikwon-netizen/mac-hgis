@@ -7,9 +7,11 @@
 #include "core/GeometryEditOps.h"  // [int W4] F083 merge conflict question
 #include "core/LayerOps.h"
 #include "core/LayoutService.h"
+#include "core/LineToPolygonOps.h"
 #include "core/MapGeoTiffExport.h"
 #include "core/ProjectStateBuilder.h"
 
+#include <QCheckBox>
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileDialog>
@@ -507,3 +509,44 @@ void MainWindow::mergeFeaturePolygons() {
 #endif
 }
 
+void MainWindow::convertLinesToPolygon() {
+#if KA_HGIS_HAS_QGIS
+  const auto selected = KaFeatureSelectTool::allSelectedFeatures(m_canvas);
+  QVector<QgsGeometry> lines;
+  QMap<QgsVectorLayer*, QgsFeatureIds> linesByLayer;
+  for (const auto& item : selected) {
+    if (!item.layer || item.layer->geometryType() != Qgis::GeometryType::Line) continue;
+    const QgsFeature f = item.layer->getFeature(item.fid);
+    if (f.hasGeometry() && !f.geometry().isEmpty()) {
+      lines.append(f.geometry());
+      linesByLayer[item.layer.data()].insert(item.fid);
+    }
+  }
+  if (lines.isEmpty()) {
+    QMessageBox::information(this, QStringLiteral("선으로 면 만들기"),
+        QStringLiteral("면으로 변환할 선(유구선 또는 CAD선)을 먼저 선택해 주세요.\n"
+                       "[도형선택]으로 선들을 Shift+클릭 또는 드래그하여 선택합니다."));
+    return;
+  }
+  const auto res = LineToPolygonOps::polygonizeLines(lines);
+  if (!res.success || res.polygons.isEmpty()) {
+    KaUserError::warn(this, {QStringLiteral("선으로 면 만들기"), QStringLiteral("면 생성 실패"), res.errorMessage, {}});
+    return;
+  }
+  auto* polyLayer = ensureDomainLayerForEdit(QStringLiteral("feature_poly"), QStringLiteral("유구면"));
+  if (!polyLayer || refuseReadOnlyLayer(QStringLiteral("선으로 면 만들기"), polyLayer)) return;
+
+  const bool deleteSrc = m_chkDeleteSourceLines && m_chkDeleteSourceLines->isChecked();
+  QList<QPointer<QgsVectorLayer>> affected;
+  if (!LineToPolygonOps::createPolygonFeatures(polyLayer, res.polygons, linesByLayer, deleteSrc, affected)) return;
+  if (deleteSrc) rememberLinkedEdit(affected);
+  QgsProject::instance()->setDirty(true);
+  if (m_canvas) m_canvas->refresh();
+  statusBar()->showMessage(QStringLiteral("선 %1개를 연결하여 유구면 %2개를 생성했습니다. Cmd+Z로 되돌릴 수 있습니다.")
+                               .arg(lines.size()).arg(res.polygons.size()), 10000);
+  notify(Notice::Success, QStringLiteral("선으로 면 만들기 완료"),
+         QStringLiteral("유구면 %1개가 '유구_면' 레이어에 등록되었습니다.").arg(res.polygons.size()));
+#else
+  statusBar()->showMessage(QStringLiteral("스텁: 선으로 면 만들기"), 3000);
+#endif
+}

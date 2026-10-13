@@ -174,6 +174,7 @@ private slots:
   void startEditArtifact();
   void startEasyDraw();
   void mergeFeaturePolygons();
+  void convertLinesToPolygon();
   void clipOverlappingLayers();
   // 위에 그린 면 모양대로 아래 면에서 그 자리만 지운다(겹친 곳 지우기).
   void eraseOverlapWithShape();
@@ -531,6 +532,7 @@ private:
   QString m_lastCanvasPaintState;
   QStringList m_lastLayerKeys;
   QToolBar* m_subToolbar = nullptr;
+  QCheckBox* m_chkDeleteSourceLines = nullptr;
   QString m_subToolsMode;
   bool m_snapEnabled = true;
   KaDrawingStudio* m_drawingStudio = nullptr;

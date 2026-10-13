@@ -915,6 +915,18 @@ void MainWindow::showSubToolsDraw() {
       QStringLiteral("[폴리곤 묶기]로 하나가 된 면을 다시 나눕니다.\n"
                      "쓰는 법: 면을 가로지르는 선을 클릭해 그리고 우클릭하면 그 선을 따라 갈라집니다.\n"
                      "(Shift로 도형 두 개를 고른 뒤 눌러도 겹친 구간에서 나뉩니다.)"));
+  auto* lineToPolyAct = m_subToolbar->addAction(QStringLiteral("선으로 면 만들기"), this, &MainWindow::convertLinesToPolygon);
+  lineToPolyAct->setObjectName(QStringLiteral("actLineToPolygon"));
+  lineToPolyAct->setToolTip(
+      QStringLiteral("선택한 선(CAD/유구선)들의 벌어진 틈새(5cm 이내)를 자석처럼 자동 연결하여 유구면으로 만듭니다.\n"
+                     "쓰는 법: [도형선택]으로 선들을 고른 뒤 이 버튼을 누릅니다. Cmd+Z로 되돌릴 수 있습니다."));
+  m_chkDeleteSourceLines = new QCheckBox(QStringLiteral("변환 후 원본 선 지우기"), m_subToolbar);
+  m_chkDeleteSourceLines->setObjectName(QStringLiteral("chkDeleteSourceLines"));
+  m_chkDeleteSourceLines->setChecked(false);
+  m_chkDeleteSourceLines->setToolTip(
+      QStringLiteral("체크 시 면 생성 후 변환에 사용된 원본 선들을 자동으로 삭제합니다.\n"
+                     "체크 해제(기본값) 시 원본 선을 그대로 유지합니다."));
+  m_subToolbar->addWidget(m_chkDeleteSourceLines);
   auto* clipAct = m_subToolbar->addAction(QStringLiteral("구간 분리"), this, &MainWindow::clipOverlappingLayers);
   clipAct->setToolTip(
       QStringLiteral("겹쳐 있는 두 레이어에서 겹치는 구간만 새 레이어로 떼어 냅니다. 원본은 그대로 남습니다."));

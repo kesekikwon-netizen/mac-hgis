@@ -350,6 +350,7 @@ add_library(ka_core STATIC
   src/core/LineMapStyle.cpp
   src/core/CadDrawingStore.cpp
   src/core/CadDrawingLayers.cpp
+  src/core/LineToPolygonOps.cpp
   src/core/ChecklistEngine.h
   src/core/SurveyProjectFactory.h
   src/core/FileCleanup.h
@@ -435,6 +436,7 @@ add_library(ka_core STATIC
   src/core/LineMapStyle.h
   src/core/CadDrawingStore.h
   src/core/CadDrawingLayers.h
+  src/core/LineToPolygonOps.h
 )
 # clangd (C++ code tool): the Visual Studio generator writes no compile_commands.json, so leave a
 # CMake file-API codemodel query (answered by every later cmake run) and convert the reply whenever
@@ -887,6 +889,12 @@ if(KA_HGIS_BUILD_TESTS)
   target_link_directories(ka_parcel_copy_tests PRIVATE ${KA_LIBDIRS})
   target_compile_definitions(ka_parcel_copy_tests PRIVATE ${KA_TEST_DEFS})
   ka_add_qtest(parcel_copy ka_parcel_copy_tests)
+  add_executable(ka_line_to_polygon_tests tests/test_line_to_polygon.cpp)
+  target_link_libraries(ka_line_to_polygon_tests PRIVATE ${KA_TEST_LIBS})
+  target_include_directories(ka_line_to_polygon_tests PRIVATE ${KA_INCLUDES})
+  target_link_directories(ka_line_to_polygon_tests PRIVATE ${KA_LIBDIRS})
+  target_compile_definitions(ka_line_to_polygon_tests PRIVATE ${KA_TEST_DEFS})
+  ka_add_qtest(line_to_polygon ka_line_to_polygon_tests)
   add_executable(ka_parcel_copy_keys_tests tests/test_parcel_copy_keys.cpp tests/parcel_copy_fixture.h
     src/app/KaCaptureMapTool.cpp src/app/KaCaptureMapTool.h src/app/KaSketchMeasure.cpp src/app/KaSketchMeasure.h
     src/app/KaFeatureSelectTool.cpp src/app/KaFeatureSelectPick.cpp src/app/KaFeatureSelectTool.h
