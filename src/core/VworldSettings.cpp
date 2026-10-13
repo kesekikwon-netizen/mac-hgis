@@ -57,10 +57,8 @@ std::unique_ptr<QSettings> VworldSettings::openNativeStore() {
 
 // Folder of ka-hgis-vworld.ini: the portable config folder, the scope folder, or AppConfig.
 static QString keyIniFolder() {
-  if (!isPortableBundle()) {
-    const QString folder = VworldSettings::scope().folder;
-    if (!folder.isEmpty()) return folder;
-  }
+  const QString folder = VworldSettings::scope().folder;
+  if (!folder.isEmpty()) return folder;
   return KaPortableRuntime::userConfigDir();
 }
 
@@ -109,7 +107,7 @@ static void writeKey(QSettings& settings, const QString& key) {
 }
 
 QString VworldSettings::loadApiKey() {
-  if (isPortableBundle()) {
+  if (isPortableBundle() && scope().folder.isEmpty()) {
     QSettings settings = makeSettings();
     QString key = settings.value(ssotKey()).toString().trimmed();
     if (key.isEmpty())
@@ -169,7 +167,7 @@ void VworldSettings::saveApiKey(const QString& key) {
   const QString k = key.trimmed();
   QSettings settings = makeSettings();
   writeKey(settings, k);
-  if (isPortableBundle()) {
+  if (isPortableBundle() && scope().folder.isEmpty()) {
     QSettings secrets(portableSecretsPath(), QSettings::IniFormat);
     writeKey(secrets, k);
     return;
@@ -199,7 +197,7 @@ QString VworldSettings::loadHistoryGisApiKey() {
   if (!key.isEmpty())
     return key;
 
-  if (isPortableBundle()) {
+  if (isPortableBundle() && scope().folder.isEmpty()) {
     key = readHistoryKeyFromIni(portableSecretsPath());
     if (!key.isEmpty())
       return key;
@@ -223,7 +221,7 @@ void VworldSettings::saveHistoryGisApiKey(const QString& key) {
   const QString k = key.trimmed();
   QSettings settings = makeSettings();
   writeHistoryKey(settings, k);
-  if (isPortableBundle()) {
+  if (isPortableBundle() && scope().folder.isEmpty()) {
     QSettings secrets(portableSecretsPath(), QSettings::IniFormat);
     writeHistoryKey(secrets, k);
     return;
