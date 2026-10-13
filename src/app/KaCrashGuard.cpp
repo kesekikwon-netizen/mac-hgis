@@ -17,8 +17,8 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
-#include <windows.h>
 #include <dbghelp.h>
+#include <windows.h>
 #pragma comment(lib, "dbghelp.lib")
 #endif
 
@@ -31,18 +31,22 @@ wchar_t g_logDirW[MAX_PATH] = L"";
 std::atomic<bool> g_inCrash{false};
 QtMessageHandler g_prevQtHandler = nullptr;
 
-QString logDirQ() { return KaSessionLog::dir(); }
+QString logDirQ() {
+  return KaSessionLog::dir();
+}
 
 #ifdef Q_OS_WIN
 
-void appendUtf8(FILE* f, const char* s) { fputs(s, f); }
+void appendUtf8(FILE* f, const char* s) {
+  fputs(s, f);
+}
 
 void writeTimestamp(FILE* f) {
   SYSTEMTIME st;
   GetLocalTime(&st);
   char buf[64];
-  _snprintf_s(buf, _TRUNCATE, "%04u-%02u-%02u %02u:%02u:%02u.%03u", st.wYear, st.wMonth, st.wDay,
-              st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+  _snprintf_s(buf, _TRUNCATE, "%04u-%02u-%02u %02u:%02u:%02u.%03u", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute,
+              st.wSecond, st.wMilliseconds);
   appendUtf8(f, buf);
 }
 
@@ -51,8 +55,7 @@ void writeFrame(FILE* f, int idx, DWORD64 addr) {
   char line[1024];
   char modName[MAX_PATH] = "?";
   HMODULE mod = nullptr;
-  if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-                             GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+  if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
                          reinterpret_cast<LPCWSTR>(addr), &mod) &&
       mod) {
     wchar_t modPath[MAX_PATH];
@@ -83,8 +86,7 @@ void writeFrame(FILE* f, int idx, DWORD64 addr) {
     _snprintf_s(line, _TRUNCATE, "  #%02d %s!%s+0x%llx\n", idx, modName, sym->Name,
                 static_cast<unsigned long long>(disp));
   else
-    _snprintf_s(line, _TRUNCATE, "  #%02d %s+0x%llx\n", idx, modName,
-                static_cast<unsigned long long>(rva));
+    _snprintf_s(line, _TRUNCATE, "  #%02d %s+0x%llx\n", idx, modName, static_cast<unsigned long long>(rva));
   appendUtf8(f, line);
 }
 
@@ -110,8 +112,8 @@ void writeStack(FILE* f, CONTEXT* ctx) {
   sf.AddrStack.Offset = c.Rsp;
   sf.AddrStack.Mode = AddrModeFlat;
   for (int i = 0; i < 62; ++i) {
-    if (!StackWalk64(IMAGE_FILE_MACHINE_AMD64, GetCurrentProcess(), GetCurrentThread(), &sf, &c,
-                     nullptr, SymFunctionTableAccess64, SymGetModuleBase64, nullptr))
+    if (!StackWalk64(IMAGE_FILE_MACHINE_AMD64, GetCurrentProcess(), GetCurrentThread(), &sf, &c, nullptr,
+                     SymFunctionTableAccess64, SymGetModuleBase64, nullptr))
       break;
     if (!sf.AddrPC.Offset) break;
     writeFrame(f, i, sf.AddrPC.Offset);
@@ -122,8 +124,8 @@ FILE* openCrashLog(wchar_t* outStem, size_t stemLen) {
   SYSTEMTIME st;
   GetLocalTime(&st);
   wchar_t path[MAX_PATH];
-  _snwprintf_s(outStem, stemLen, _TRUNCATE, L"%s\\crash-%04u%02u%02u-%02u%02u%02u", g_logDirW,
-               st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+  _snwprintf_s(outStem, stemLen, _TRUNCATE, L"%s\\crash-%04u%02u%02u-%02u%02u%02u", g_logDirW, st.wYear, st.wMonth,
+               st.wDay, st.wHour, st.wMinute, st.wSecond);
   _snwprintf_s(path, _TRUNCATE, L"%s.log", outStem);
   FILE* f = nullptr;
   _wfopen_s(&f, path, L"ab");
@@ -133,16 +135,14 @@ FILE* openCrashLog(wchar_t* outStem, size_t stemLen) {
 void writeMiniDump(const wchar_t* stem, EXCEPTION_POINTERS* ep) {
   wchar_t path[MAX_PATH];
   _snwprintf_s(path, _TRUNCATE, L"%s.dmp", stem);
-  HANDLE h = CreateFileW(path, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
-                         FILE_ATTRIBUTE_NORMAL, nullptr);
+  HANDLE h = CreateFileW(path, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
   if (h == INVALID_HANDLE_VALUE) return;
   MINIDUMP_EXCEPTION_INFORMATION mei = {};
   mei.ThreadId = GetCurrentThreadId();
   mei.ExceptionPointers = ep;
   mei.ClientPointers = FALSE;
   const auto type = static_cast<MINIDUMP_TYPE>(KaCrashGuard::miniDumpTypeFlags());
-  MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), h, type, ep ? &mei : nullptr,
-                    nullptr, nullptr);
+  MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), h, type, ep ? &mei : nullptr, nullptr, nullptr);
   CloseHandle(h);
 }
 
@@ -176,8 +176,7 @@ void kaTerminateHandler() {
           std::rethrow_exception(cur);
         } catch (const std::exception& e) {
           char buf[512];
-          _snprintf_s(buf, _TRUNCATE, "  exception: %s\n  what(): %s\n", typeid(e).name(),
-                      e.what());
+          _snprintf_s(buf, _TRUNCATE, "  exception: %s\n  what(): %s\n", typeid(e).name(), e.what());
           appendUtf8(f, buf);
         } catch (...) {
           appendUtf8(f, "  exception: (std::exception 아님)\n");
@@ -195,8 +194,7 @@ void kaTerminateHandler() {
 }
 
 // CRT 잘못된 파라미터(널 포인터 문자열 등) — 릴리스에선 인자 정보가 없다.
-void kaInvalidParameterHandler(const wchar_t*, const wchar_t*, const wchar_t*, unsigned int,
-                               uintptr_t) {
+void kaInvalidParameterHandler(const wchar_t*, const wchar_t*, const wchar_t*, unsigned int, uintptr_t) {
   if (!g_inCrash.exchange(true)) {
     wchar_t stem[MAX_PATH];
     if (FILE* f = openCrashLog(stem, MAX_PATH)) {
@@ -237,7 +235,9 @@ void kaQtMessageHandler(QtMsgType type, const QMessageLogContext& ctx, const QSt
 
 }  // namespace
 
-QString KaCrashGuard::logDir() { return KaSessionLog::dir(); }
+QString KaCrashGuard::logDir() {
+  return KaSessionLog::dir();
+}
 
 unsigned long KaCrashGuard::miniDumpTypeFlags() {
 #ifdef Q_OS_WIN
@@ -265,9 +265,13 @@ int KaCrashGuard::pruneCrashFiles(const QString& dir, int keepDumps, int keepLog
   return removed;
 }
 
-QString KaCrashGuard::dumpHint() { return KaSessionLog::dumpHint(); }
+QString KaCrashGuard::dumpHint() {
+  return KaSessionLog::dumpHint();
+}
 
-void KaCrashGuard::logLine(const QString& line) { KaSessionLog::line(line); }
+void KaCrashGuard::logLine(const QString& line) {
+  KaSessionLog::line(line);
+}
 
 void KaCrashGuard::install() {
   QDir().mkpath(logDirQ());
@@ -278,6 +282,11 @@ void KaCrashGuard::install() {
   std::set_terminate(kaTerminateHandler);
   _set_invalid_parameter_handler(kaInvalidParameterHandler);
   _set_purecall_handler(kaPurecallHandler);
+#else
+  std::set_terminate([] {
+    KaCrashGuard::logLine(QStringLiteral("[crash] std::terminate: 처리되지 않은 예외 발생"));
+    std::abort();
+  });
 #endif
   g_prevQtHandler = qInstallMessageHandler(kaQtMessageHandler);
   logLine(QStringLiteral("[boot] 진단 장치 시작 — %1").arg(dumpHint()));

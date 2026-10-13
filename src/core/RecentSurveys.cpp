@@ -21,11 +21,15 @@
 
 namespace {
 
-QString listKey() { return QStringLiteral("RecentSurveys/items"); }
-QString skipRestoreKey() { return QStringLiteral("RecentSurveys/skipAutoRestore"); }
+QString listKey() {
+  return QStringLiteral("RecentSurveys/items");
+}
+QString skipRestoreKey() {
+  return QStringLiteral("RecentSurveys/skipAutoRestore");
+}
 
 constexpr Qt::CaseSensitivity kPathCase =
-#ifdef Q_OS_WIN
+#if defined(Q_OS_WIN) || defined(Q_OS_MACOS) || defined(Q_OS_DARWIN)
     Qt::CaseInsensitive;
 #else
     Qt::CaseSensitive;
@@ -131,9 +135,7 @@ QStringList localDriveRoots() {
 #ifdef Q_OS_WIN
     if (root.size() >= 2 && root.at(1) == QLatin1Char(':')) {
       const UINT type = driveType(root.at(0));
-      if (type == DRIVE_REMOTE || type == DRIVE_CDROM || type == DRIVE_NO_ROOT_DIR ||
-          type == DRIVE_UNKNOWN)
-        continue;
+      if (type == DRIVE_REMOTE || type == DRIVE_CDROM || type == DRIVE_NO_ROOT_DIR || type == DRIVE_UNKNOWN) continue;
     }
 #endif
     roots << root;
@@ -172,8 +174,7 @@ QVector<RecentSurveys::Item> loadStored(QSettings& settings) {
 void store(QSettings& settings, const QVector<RecentSurveys::Item>& items) {
   QStringList raw;
   for (const RecentSurveys::Item& it : items)
-    raw << (it.path + QLatin1Char('\t') + storableName(it.name) + QLatin1Char('\t') +
-            QString::number(it.lastOpenedMs));
+    raw << (it.path + QLatin1Char('\t') + storableName(it.name) + QLatin1Char('\t') + QString::number(it.lastOpenedMs));
   settings.setValue(listKey(), raw);
   settings.sync();
 }
@@ -181,8 +182,7 @@ void store(QSettings& settings, const QVector<RecentSurveys::Item>& items) {
 }  // namespace
 
 QSettings RecentSurveys::userSettings() {
-  return QSettings(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("ka-hgis"),
-                   QStringLiteral("ka-hgis"));
+  return QSettings(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("ka-hgis"), QStringLiteral("ka-hgis"));
 }
 
 bool RecentSurveys::samePath(const QString& a, const QString& b) {
@@ -221,7 +221,8 @@ QVector<RecentSurveys::Item> RecentSurveys::loadAll(QSettings& settings) {
     }
     if (it.name.isEmpty()) it.name = QFileInfo(it.path).completeBaseName();
     bool duplicate = false;
-    for (const Item& seen : out) duplicate = duplicate || samePath(seen.path, it.path);
+    for (const Item& seen : out)
+      duplicate = duplicate || samePath(seen.path, it.path);
     if (!duplicate) out.push_back(it);
   }
   return out;
@@ -255,8 +256,7 @@ QString RecentSurveys::lastPath(QSettings& settings) {
 
 void RecentSurveys::remember(QSettings& settings, const QString& path, const QString& name) {
   const QString abs = QFileInfo(path).absoluteFilePath();
-  if (abs.isEmpty() || !QFileInfo::exists(abs))
-    return;
+  if (abs.isEmpty() || !QFileInfo::exists(abs)) return;
   noteReachable(abs);
   const QString cleanName = storableName(name);
   const QString shown = cleanName.isEmpty() ? QFileInfo(abs).completeBaseName() : cleanName;

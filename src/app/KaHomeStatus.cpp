@@ -25,7 +25,9 @@ namespace {
 // Mapped network drives (Z:) and UNC paths can stall for seconds when the server is gone;
 // the home screen never waits on them.
 bool isNetworkPath(const QString& directory) {
-  const QString native = QDir::toNativeSeparators(QFileInfo(directory).absoluteFilePath());
+  const QString clean = QDir::cleanPath(QFileInfo(directory).absoluteFilePath());
+  if (clean.startsWith(QLatin1String("//"))) return true;
+  const QString native = QDir::toNativeSeparators(clean);
   if (native.startsWith(QLatin1String("\\\\"))) return true;
 #ifdef Q_OS_WIN
   if (native.size() >= 2 && native.at(1) == QLatin1Char(':')) {
@@ -79,8 +81,7 @@ QVector<Line> describe(const Inputs& inputs) {
   QVector<Line> lines;
   for (const AccountStatus::Entry& entry : inputs.accounts)
     lines.append({QStringLiteral("%1 · %2").arg(entry.label, AccountStatus::stateText(entry.ready)),
-                  entry.ready ? QString() : QStringLiteral("%1 — %2").arg(entry.menuPath, entry.usedFor),
-                  entry.ready});
+                  entry.ready ? QString() : QStringLiteral("%1 — %2").arg(entry.menuPath, entry.usedFor), entry.ready});
   lines.append({inputs.crsDatabase ? QStringLiteral("좌표계 자료(proj.db) · 정상")
                                    : QStringLiteral("좌표계 자료(proj.db) · 확인 필요"),
                 inputs.crsDatabase ? QString()

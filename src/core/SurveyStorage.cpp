@@ -1,7 +1,7 @@
-#include "CadPendingCopies.h"
-#include "KaSessionLog.h"
-#include "KaLogExcept.h"
 #include "SurveyStorage.h"
+#include "CadPendingCopies.h"
+#include "KaLogExcept.h"
+#include "KaSessionLog.h"
 #include "LayerOps.h"
 #include "SurveyBundle.h"
 #include "SurveyDurability.h"
@@ -26,19 +26,19 @@
 
 #include <qgis.h>
 #include <qgscoordinatetransformcontext.h>
-#include <qgsproject.h>
 #include <qgslayertree.h>
 #include <qgsmaplayerstyle.h>
-#include <qgsrasterlayer.h>
-#include <qgsvectorfilewriter.h>
-#include <qgsvectordataprovider.h>
-#include <qgsvectorlayer.h>
-#include <qgsvectorlayereditbuffer.h>
 #include <qgsogrproviderutils.h>
 #include <qgspathresolver.h>
+#include <qgsproject.h>
+#include <qgsrasterlayer.h>
+#include <qgsvectordataprovider.h>
+#include <qgsvectorfilewriter.h>
+#include <qgsvectorlayer.h>
+#include <qgsvectorlayereditbuffer.h>
 
-#include <gdal.h>
 #include <cpl_error.h>
+#include <gdal.h>
 #include <ogr_api.h>
 
 #ifdef Q_OS_WIN
@@ -71,8 +71,7 @@ bool livesInGpkg(const QgsVectorLayer* layer, const QString& gpkgPath) {
   const QString src = layer->source();
   const QString file = src.section(QLatin1Char('|'), 0, 0);
   if (file.isEmpty()) return false;
-  return QFileInfo(file).absoluteFilePath().compare(QFileInfo(gpkgPath).absoluteFilePath(),
-                                                    Qt::CaseInsensitive) == 0;
+  return QFileInfo(file).absoluteFilePath().compare(QFileInfo(gpkgPath).absoluteFilePath(), Qt::CaseInsensitive) == 0;
 }
 
 QString gpkgTableName(const QgsVectorLayer* layer) {
@@ -110,8 +109,7 @@ CopyEdits applyEditBufferToCopy(QgsVectorLayer* layer, const QString& copyGpkg, 
   QgsVectorLayerEditBuffer* buffer = layer ? layer->editBuffer() : nullptr;
   if (!buffer) return CopyEdits::Applied;
   // 필드를 더하거나 지운 편집은 테이블 모양이 바뀌므로 통째로 다시 쓴다.
-  if (!buffer->addedAttributes().isEmpty() || !buffer->deletedAttributeIds().isEmpty())
-    return CopyEdits::SchemaChanged;
+  if (!buffer->addedAttributes().isEmpty() || !buffer->deletedAttributeIds().isEmpty()) return CopyEdits::SchemaChanged;
   QgsVectorLayer target(QStringLiteral("%1|layername=%2").arg(copyGpkg, table), QStringLiteral("세대 사본"),
                         QStringLiteral("ogr"));
   QgsVectorDataProvider* provider = target.isValid() ? target.dataProvider() : nullptr;
@@ -184,8 +182,7 @@ void retargetGpkgLayers(QgsProject* project, const QString& fromPath, const QStr
     const QString table = gpkgTableName(vl);
     if (table.isEmpty()) continue;
     const bool editing = vl->isEditable();
-    vl->setDataSource(QStringLiteral("%1|layername=%2").arg(toPath, table), vl->name(),
-                      QStringLiteral("ogr"));
+    vl->setDataSource(QStringLiteral("%1|layername=%2").arg(toPath, table), vl->name(), QStringLiteral("ogr"));
     if (editing && vl->isValid() && !vl->isEditable()) vl->startEditing();
   }
 }
@@ -207,12 +204,13 @@ int remountCopiedSurveyLayers(QgsProject* project, const QString& gpkgPath) {
     if (fi.absoluteFilePath().compare(abs, Qt::CaseInsensitive) == 0) continue;
     const QString table = gpkgTableName(vl);
     if (table.isEmpty()) continue;
-    QgsVectorLayer probe(QStringLiteral("%1|layername=%2").arg(abs, table),
-                         QStringLiteral("probe"), QStringLiteral("ogr"));
+    QgsVectorLayer probe(QStringLiteral("%1|layername=%2").arg(abs, table), QStringLiteral("probe"),
+                         QStringLiteral("ogr"));
     if (!probe.isValid()) continue;
     stale.insert(fi.absoluteFilePath());
   }
-  for (const QString& from : stale) retargetGpkgLayers(project, from, abs);
+  for (const QString& from : stale)
+    retargetGpkgLayers(project, from, abs);
   return stale.size();
 }
 
@@ -236,8 +234,7 @@ void restoreLayerSources(QgsProject* project, const QHash<QString, QString>& sou
 
 void dropIdleJournals(const QString& gpkgPath) {
   if (gpkgPath.isEmpty()) return;
-  for (const QString& suffix : {QStringLiteral("-wal"), QStringLiteral("-shm"),
-                                QStringLiteral("-journal")}) {
+  for (const QString& suffix : {QStringLiteral("-wal"), QStringLiteral("-shm"), QStringLiteral("-journal")}) {
     const QString side = gpkgPath + suffix;
     if (QFileInfo::exists(side)) QFile::remove(side);
   }
@@ -262,8 +259,8 @@ QList<QgsVectorLayer*> embeddedReferenceLayers(QgsProject* project, const QStrin
 
 bool dropGpkgTables(const QString& gpkgPath, const QStringList& tables, QString* errorOut) {
   if (tables.isEmpty()) return true;
-  GDALDatasetH ds = GDALOpenEx(gpkgPath.toUtf8().constData(), GDAL_OF_VECTOR | GDAL_OF_UPDATE,
-                               nullptr, nullptr, nullptr);
+  GDALDatasetH ds =
+      GDALOpenEx(gpkgPath.toUtf8().constData(), GDAL_OF_VECTOR | GDAL_OF_UPDATE, nullptr, nullptr, nullptr);
   if (!ds) {
     if (errorOut) *errorOut = QStringLiteral("조사 파일을 수정용으로 열지 못했습니다.");
     return false;
@@ -280,8 +277,7 @@ bool dropGpkgTables(const QString& gpkgPath, const QStringList& tables, QString*
     }
     if (index < 0) continue;
     if (GDALDatasetDeleteLayer(ds, index) != OGRERR_NONE) {
-      if (errorOut)
-        *errorOut = QStringLiteral("%1 테이블을 조사 파일에서 빼지 못했습니다.").arg(table);
+      if (errorOut) *errorOut = QStringLiteral("%1 테이블을 조사 파일에서 빼지 못했습니다.").arg(table);
       GDALClose(ds);
       return false;
     }
@@ -295,8 +291,7 @@ bool dropGpkgTables(const QString& gpkgPath, const QStringList& tables, QString*
 
 QSet<QString> existingGpkgLayerNames(const QString& gpkgPath) {
   QSet<QString> names;
-  GDALDatasetH ds = GDALOpenEx(gpkgPath.toUtf8().constData(), GDAL_OF_VECTOR, nullptr, nullptr,
-                               nullptr);
+  GDALDatasetH ds = GDALOpenEx(gpkgPath.toUtf8().constData(), GDAL_OF_VECTOR, nullptr, nullptr, nullptr);
   if (!ds) return names;
   const int n = GDALDatasetGetLayerCount(ds);
   for (int i = 0; i < n; ++i) {
@@ -308,8 +303,8 @@ QSet<QString> existingGpkgLayerNames(const QString& gpkgPath) {
 }
 
 bool readProjectPlain(QgsProject* project, const QString& uri, bool loadLayouts) {
-  return project->read(uri, loadLayouts ? Qgis::ProjectReadFlags()
-                                       : Qgis::ProjectReadFlags(Qgis::ProjectReadFlag::DontLoadLayouts));
+  return project->read(
+      uri, loadLayouts ? Qgis::ProjectReadFlags() : Qgis::ProjectReadFlags(Qgis::ProjectReadFlag::DontLoadLayouts));
 }
 
 // SEH를 쓰는 함수에는 소멸자가 필요한 지역 객체를 둘 수 없다(C2712). 그래서 감시만
@@ -335,8 +330,7 @@ QString writableSurveyPath(const QString& requestedPath, const QString& fallback
   if (requestedPath.trimmed().isEmpty()) return {};
   const QFileInfo requested(requestedPath);
   const QString abs = requested.absoluteFilePath();
-  if (QFileInfo::exists(abs) || QFileInfo(requested.absolutePath()).isDir())
-    return abs;
+  if (QFileInfo::exists(abs) || QFileInfo(requested.absolutePath()).isDir()) return abs;
   const QFileInfo fallback(fallbackDir);
   if (!fallbackDir.trimmed().isEmpty() && (fallback.isDir() || QDir().mkpath(fallback.absoluteFilePath())))
     return QDir(fallback.absoluteFilePath()).filePath(requested.fileName());
@@ -345,20 +339,17 @@ QString writableSurveyPath(const QString& requestedPath, const QString& fallback
 
 QString projectUri(const QString& gpkgPath) {
   if (gpkgPath.isEmpty()) return {};
-  return QStringLiteral("geopackage:%1?projectName=survey")
-      .arg(QFileInfo(gpkgPath).absoluteFilePath());
+  return QStringLiteral("geopackage:%1?projectName=survey").arg(QFileInfo(gpkgPath).absoluteFilePath());
 }
 
 bool hasEmbeddedProject(const QString& gpkgPath) {
   if (gpkgPath.isEmpty() || !QFileInfo::exists(gpkgPath)) return false;
-  GDALDatasetH ds = GDALOpenEx(gpkgPath.toUtf8().constData(), GDAL_OF_VECTOR, nullptr, nullptr,
-                               nullptr);
+  GDALDatasetH ds = GDALOpenEx(gpkgPath.toUtf8().constData(), GDAL_OF_VECTOR, nullptr, nullptr, nullptr);
   if (!ds) return false;
   // QGIS는 내장 프로젝트를 qgis_projects 테이블에 넣는다. 지오메트리가 없는 테이블이라
   // 레이어 목록에는 안 잡히므로 SQL로 직접 확인한다.
   OGRLayerH res = GDALDatasetExecuteSQL(
-      ds, "SELECT name FROM sqlite_master WHERE type='table' AND name='qgis_projects'", nullptr,
-      nullptr);
+      ds, "SELECT name FROM sqlite_master WHERE type='table' AND name='qgis_projects'", nullptr, nullptr);
   bool found = false;
   if (res) {
     found = OGR_L_GetFeatureCount(res, 1) > 0;
@@ -371,8 +362,8 @@ bool hasEmbeddedProject(const QString& gpkgPath) {
 bool validateForOpen(const QString& gpkgPath, QString* errorOut) {
   if (errorOut) errorOut->clear();
   const char* drivers[] = {"GPKG", nullptr};
-  GDALDatasetH dataset = GDALOpenEx(gpkgPath.toUtf8().constData(),
-      GDAL_OF_VECTOR | GDAL_OF_READONLY, drivers, nullptr, nullptr);
+  GDALDatasetH dataset =
+      GDALOpenEx(gpkgPath.toUtf8().constData(), GDAL_OF_VECTOR | GDAL_OF_READONLY, drivers, nullptr, nullptr);
   if (!dataset) {
     if (errorOut) *errorOut = QStringLiteral("읽을 수 있는 GeoPackage 조사 파일이 아닙니다.");
     return false;
@@ -399,9 +390,7 @@ bool replaceWithStaged(const QString& staged, const QString& target, QString* er
     if (attempt) SurveyDurability::waitBeforeRetry(attempt < 10 ? 100 : 300);  // 지우기 예약된 읽기 손잡이부터 놓는다
     quint32 code = 0;
     if (SurveyDurability::replaceFileDurably(staged, target, &code, errorOut)) return true;
-#ifdef Q_OS_WIN
     if (!SurveyDurability::isTransientLockError(code)) return false;
-#endif
   }
   return false;
 }
@@ -411,14 +400,12 @@ QString siblingSurveyPath(const QFileInfo& target) {
   QString path = target.dir().filePath(target.completeBaseName() + QStringLiteral("-저장.") + suffix);
   int n = 2;
   while (QFileInfo::exists(path)) {
-    path = target.dir().filePath(target.completeBaseName() +
-                                 QStringLiteral("-저장%1.").arg(n++) + suffix);
+    path = target.dir().filePath(target.completeBaseName() + QStringLiteral("-저장%1.").arg(n++) + suffix);
   }
   return QFileInfo(path).absoluteFilePath();
 }
 
-bool finishStagedSurvey(const QString& staged, const QString& targetPath, QString* errorOut,
-                        QString* writtenPath) {
+bool finishStagedSurvey(const QString& staged, const QString& targetPath, QString* errorOut, QString* writtenPath) {
   const auto fail = [errorOut](const QString& message) {
     if (errorOut) *errorOut = message;
     return false;
@@ -432,29 +419,25 @@ bool finishStagedSurvey(const QString& staged, const QString& targetPath, QStrin
   }
   // 이름 교체를 끝까지 거부당해도 원본을 제자리에서 잘라 덮어쓰지 않는다(도중에 끊기면
   // 원본이 잘린 채 남는다). 검증된 새 세대는 옆의 -저장.gpkg 로 둔다.
-  KaSessionLog::line(QStringLiteral("[save] 이름 교체 거부 — 원본은 두고 옆 파일에 저장: %1")
-                         .arg(replaceError));
-  KaSessionLog::line(QStringLiteral("[save] 원본 교체 거부 진단 — %1").arg(SurveyDurability::lockDiagnosis(targetPath)));
+  KaSessionLog::line(QStringLiteral("[save] 이름 교체 거부 — 원본은 두고 옆 파일에 저장: %1").arg(replaceError));
+  KaSessionLog::line(
+      QStringLiteral("[save] 원본 교체 거부 진단 — %1").arg(SurveyDurability::lockDiagnosis(targetPath)));
   const QString alt = siblingSurveyPath(QFileInfo(targetPath));
   QString copyError;
-  if (SurveyDurability::replaceFileDurably(staged, alt) ||
-      SurveyDurability::copyFileDurably(staged, alt, &copyError)) {
+  if (SurveyDurability::replaceFileDurably(staged, alt) || SurveyDurability::copyFileDurably(staged, alt, &copyError)) {
     QFile::remove(staged);
     dropIdleJournals(alt);
     if (writtenPath) *writtenPath = alt;
-    KaSessionLog::line(QStringLiteral("[save] 원본이 열려 옆 파일에 저장 — %1")
-                           .arg(QDir::toNativeSeparators(alt)));
+    KaSessionLog::line(QStringLiteral("[save] 원본이 열려 옆 파일에 저장 — %1").arg(QDir::toNativeSeparators(alt)));
     return true;
   }
   // 새 세대 파일(staged)은 지우지 않는다. 안내한 경로에 실제로 남아 있어야 한다.
   return fail(QStringLiteral("저장 파일을 교체하지 못했습니다: %1 · 원본 조사 파일은 그대로이고, 새로 "
                              "만든 조사 파일은 %2 에 남겨 두었습니다.")
-                  .arg(copyError.isEmpty() ? replaceError : copyError,
-                       QDir::toNativeSeparators(staged)));
+                  .arg(copyError.isEmpty() ? replaceError : copyError, QDir::toNativeSeparators(staged)));
 }
 
-bool copySurvey(const QString& sourceGpkg, const QString& targetGpkg, QString* errorOut,
-                QString* writtenPath) {
+bool copySurvey(const QString& sourceGpkg, const QString& targetGpkg, QString* errorOut, QString* writtenPath) {
   if (errorOut) errorOut->clear();
   if (writtenPath) writtenPath->clear();
   const auto fail = [errorOut](const QString& message) {
@@ -475,8 +458,8 @@ bool copySurvey(const QString& sourceGpkg, const QString& targetGpkg, QString* e
   QTemporaryDir temporary(target.dir().filePath(QStringLiteral(".ka-survey-copy-XXXXXX")));
   if (!temporary.isValid()) return fail(QStringLiteral("저장 폴더에 임시 사본을 만들 수 없습니다."));
   const QString snapshot = temporary.filePath(QStringLiteral("survey.gpkg"));
-  GDALDatasetH dataset = GDALOpenEx(source.absoluteFilePath().toUtf8().constData(), GDAL_OF_VECTOR,
-                                    nullptr, nullptr, nullptr);
+  GDALDatasetH dataset =
+      GDALOpenEx(source.absoluteFilePath().toUtf8().constData(), GDAL_OF_VECTOR, nullptr, nullptr, nullptr);
   if (!dataset) return fail(QStringLiteral("원본 조사 파일을 읽을 수 없습니다."));
   // SQLite VACUUM INTO takes a consistent read snapshot, including committed WAL,
   // without modifying the source or relying on a byte copy of its main file.
@@ -497,8 +480,8 @@ bool copySurvey(const QString& sourceGpkg, const QString& targetGpkg, QString* e
   const QString staged = target.absoluteFilePath() + QStringLiteral(".ka-new");
   QFile::remove(staged);
   QString stageError;
-  const bool movedSnapshot = SurveyDurability::flushPathToDisk(snapshot) &&
-                             SurveyDurability::replaceFileDurably(snapshot, staged);
+  const bool movedSnapshot =
+      SurveyDurability::flushPathToDisk(snapshot) && SurveyDurability::replaceFileDurably(snapshot, staged);
   if (!movedSnapshot && !SurveyDurability::copyFileDurably(snapshot, staged, &stageError))
     return fail(QStringLiteral("조사 파일 사본을 기록하지 못했습니다: %1").arg(stageError));
   // 실패하면 staged 는 finishStagedSurvey 가 안내한 경로에 그대로 남긴다.
@@ -507,8 +490,8 @@ bool copySurvey(const QString& sourceGpkg, const QString& targetGpkg, QString* e
   return true;
 }
 
-bool publishSurveyGeneration(const QString& generationGpkg, const QString& targetGpkg,
-                             QString* errorOut, QString* writtenPath) {
+bool publishSurveyGeneration(const QString& generationGpkg, const QString& targetGpkg, QString* errorOut,
+                             QString* writtenPath) {
   if (!validateForOpen(generationGpkg, errorOut)) return false;
   QString written;
   if (!copySurvey(generationGpkg, targetGpkg, errorOut, &written)) return false;
@@ -530,8 +513,7 @@ bool noteRecoveryPending(const QString& recoveryDirectory, const QString& snapsh
   const QString file = QDir::cleanPath(QFileInfo(snapshotPath).absoluteFilePath());
   if (!file.startsWith(root + QLatin1Char('/'), Qt::CaseInsensitive))
     return fail(QStringLiteral("복구 사본이 복구 폴더 밖에 있습니다."));
-  if (!QDir().mkpath(root))
-    return fail(QStringLiteral("복구 사본 폴더를 만들 수 없습니다."));
+  if (!QDir().mkpath(root)) return fail(QStringLiteral("복구 사본 폴더를 만들 수 없습니다."));
   QSaveFile output(QDir(root).filePath(QStringLiteral("pending.txt")));
   if (!output.open(QIODevice::WriteOnly) || output.write(file.toUtf8()) != file.toUtf8().size() || !output.commit())
     return fail(QStringLiteral("복구 사본 표시를 기록하지 못했습니다."));
@@ -547,8 +529,7 @@ QString pendingRecoverySnapshot(const QString& recoveryDirectory) {
 }
 
 void clearRecoveryPending(const QString& recoveryDirectory) {
-  if (!recoveryDirectory.isEmpty())
-    QFile::remove(QDir(recoveryDirectory).filePath(QStringLiteral("pending.txt")));
+  if (!recoveryDirectory.isEmpty()) QFile::remove(QDir(recoveryDirectory).filePath(QStringLiteral("pending.txt")));
 }
 
 int pruneRecoverySnapshots(const QString& recoveryDirectory, int keep, const QString& protectPath) {
@@ -594,8 +575,10 @@ QString writeRecoverySnapshot(QgsProject* project, const QString& recoveryDirect
     return fail(QStringLiteral("복구 사본 폴더를 만들 수 없습니다. 다른 저장 위치를 선택하세요."));
   // Keep the unique directory at its original location: embedded relative sources and home paths
   // must remain valid. It becomes a retained recovery result only after all writes are verified.
-  QTemporaryDir output(QDir(recoveryDirectory).filePath(
-      QStringLiteral("조사복구_%1_XXXXXX").arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd_HHmmss")))));
+  QTemporaryDir output(
+      QDir(recoveryDirectory)
+          .filePath(QStringLiteral("조사복구_%1_XXXXXX")
+                        .arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd_HHmmss")))));
   if (!output.isValid()) return fail(QStringLiteral("복구 사본을 만들 공간이나 쓰기 권한이 없습니다."));
   const QString path = output.filePath(QStringLiteral("복구조사.gpkg"));
   try {
@@ -613,8 +596,8 @@ QString writeRecoverySnapshot(QgsProject* project, const QString& recoveryDirect
         std::unique_ptr<QgsMapLayer> copied;
         if (auto* vector = qobject_cast<QgsVectorLayer*>(source)) {
           if (!vector->isValid())
-            return fail(QStringLiteral("%1을 읽을 수 없어 편집 도형 복구 사본을 완성하지 못했습니다.")
-                            .arg(source->name()));
+            return fail(
+                QStringLiteral("%1을 읽을 수 없어 편집 도형 복구 사본을 완성하지 못했습니다.").arg(source->name()));
           const QString key = LayerOps::layerKeyOf(source);
           const QString base = sanitizeLayerName(key.isEmpty() ? source->name() : key);
           QString table = base;
@@ -625,23 +608,25 @@ QString writeRecoverySnapshot(QgsProject* project, const QString& recoveryDirect
           options.driverName = QStringLiteral("GPKG");
           options.fileEncoding = QStringLiteral("UTF-8");
           options.layerName = table;
-          options.actionOnExistingFile = firstVector ? QgsVectorFileWriter::CreateOrOverwriteFile
-                                                     : QgsVectorFileWriter::CreateOrOverwriteLayer;
+          options.actionOnExistingFile =
+              firstVector ? QgsVectorFileWriter::CreateOrOverwriteFile : QgsVectorFileWriter::CreateOrOverwriteLayer;
           const auto storageName = [vector](QString name) {
-            while (vector->fields().lookupField(name) >= 0) name += QLatin1Char('_');
+            while (vector->fields().lookupField(name) >= 0)
+              name += QLatin1Char('_');
             return name;
           };
           // Pending added features can have a NULL fid while existing features already use fid=1.
           // Preserve the original fid as an attribute and reserve a different storage primary key.
-          options.layerOptions = {QStringLiteral("FID=%1").arg(storageName(QStringLiteral("__hgis_recovery_fid"))),
-                                  QStringLiteral("GEOMETRY_NAME=%1").arg(storageName(QStringLiteral("__hgis_recovery_geom")))};
+          options.layerOptions = {
+              QStringLiteral("FID=%1").arg(storageName(QStringLiteral("__hgis_recovery_fid"))),
+              QStringLiteral("GEOMETRY_NAME=%1").arg(storageName(QStringLiteral("__hgis_recovery_geom")))};
           QString detail;
-          if (QgsVectorFileWriter::writeAsVectorFormatV3(vector, path, project->transformContext(), options,
-                                                        &detail) != QgsVectorFileWriter::NoError)
+          if (QgsVectorFileWriter::writeAsVectorFormatV3(vector, path, project->transformContext(), options, &detail) !=
+              QgsVectorFileWriter::NoError)
             return fail(QStringLiteral("%1의 편집을 복구 사본에 기록하지 못했습니다: %2").arg(source->name(), detail));
           firstVector = false;
-          auto snapshot = std::make_unique<QgsVectorLayer>(
-              path + QStringLiteral("|layername=%1").arg(table), source->name(), QStringLiteral("ogr"));
+          auto snapshot = std::make_unique<QgsVectorLayer>(path + QStringLiteral("|layername=%1").arg(table),
+                                                           source->name(), QStringLiteral("ogr"));
           if (!snapshot->isValid() || snapshot->featureCount() != vector->featureCount() ||
               snapshot->crs() != vector->crs())
             return fail(QStringLiteral("%1의 복구 피처 수 또는 좌표계를 확인하지 못했습니다.").arg(source->name()));
@@ -653,9 +638,9 @@ QString writeRecoverySnapshot(QgsProject* project, const QString& recoveryDirect
           style.writeToLayer(snapshot.get());
           copied = std::move(snapshot);
         } else {
-          copied.reset(source->clone()); // Raster/reference sources stay external; never rewrite them.
-          externalReferences << source->name() + (source->isValid()
-              ? QStringLiteral(" (외부 원본 참조)") : QStringLiteral(" (외부 원본 확인 필요)"));
+          copied.reset(source->clone());  // Raster/reference sources stay external; never rewrite them.
+          externalReferences << source->name() + (source->isValid() ? QStringLiteral(" (외부 원본 참조)")
+                                                                    : QStringLiteral(" (외부 원본 확인 필요)"));
         }
         if (!copied || !copied->setId(source->id()))
           return fail(QStringLiteral("%1의 복구 레이어 구성을 만들지 못했습니다.").arg(source->name()));
@@ -683,7 +668,7 @@ QString writeRecoverySnapshot(QgsProject* project, const QString& recoveryDirect
       for (QgsMapLayer* layer : recovered.mapLayers())
         if (!recovered.layerTreeRoot()->findLayer(layer->id())) recovered.layerTreeRoot()->addLayer(layer);
       recovered.writeEntry(QStringLiteral("ka_hgis"), QStringLiteral("recovery_external_references"),
-                            externalReferences);
+                           externalReferences);
       QString detail;
       if (!writeEmbedded(&recovered, path, &detail))
         return fail(QStringLiteral("복구 사본에 레이어 구성을 기록하지 못했습니다: %1").arg(detail));
@@ -700,8 +685,7 @@ QString writeRecoverySnapshot(QgsProject* project, const QString& recoveryDirect
   }
 }
 
-AbsorbResult absorbExternalVectors(QgsProject* project, const QString& gpkgPath,
-                                   const QString& alsoSurveyGpkg) {
+AbsorbResult absorbExternalVectors(QgsProject* project, const QString& gpkgPath, const QString& alsoSurveyGpkg) {
   AbsorbResult r;
   if (!project || gpkgPath.isEmpty() || !QFileInfo::exists(gpkgPath)) return r;
 
@@ -712,8 +696,8 @@ AbsorbResult absorbExternalVectors(QgsProject* project, const QString& gpkgPath,
     if (auto* early = qobject_cast<QgsVectorLayer*>(ml)) {
       const QString provider = early->providerType().toLower();
       if (provider == QLatin1String("ogr") && !livesInGpkg(early, gpkgPath) &&
-          (alsoSurveyGpkg.isEmpty() || !livesInGpkg(early, alsoSurveyGpkg)) &&
-          !LayerOps::isReferenceLayer(early) && !LayerOps::isCadastralLayer(early)) {
+          (alsoSurveyGpkg.isEmpty() || !livesInGpkg(early, alsoSurveyGpkg)) && !LayerOps::isReferenceLayer(early) &&
+          !LayerOps::isCadastralLayer(early)) {
         const QString file = early->source().section(QLatin1Char('|'), 0, 0);
         if (file.isEmpty() || !QFileInfo::exists(file)) {
           r.failed << early->name();
@@ -726,8 +710,7 @@ AbsorbResult absorbExternalVectors(QgsProject* project, const QString& gpkgPath,
       // 래스터(스크린샷·항공사진)는 아직 바깥에 둔다. .gpkg 타일로 굽는 것은 되돌릴 수
       // 없는 변환이라 사용자가 원할 때만 해야 한다.
       const QString src = ml->source();
-      if (QFileInfo::exists(src.section(QLatin1Char('|'), 0, 0)))
-        r.skippedRaster << ml->name();
+      if (QFileInfo::exists(src.section(QLatin1Char('|'), 0, 0))) r.skippedRaster << ml->name();
       continue;
     }
     auto* vl = qobject_cast<QgsVectorLayer*>(ml);
@@ -736,11 +719,8 @@ AbsorbResult absorbExternalVectors(QgsProject* project, const QString& gpkgPath,
     // 파일에서 온 것(ogr)과 메모리 레이어만 대상. xyz/wms 배경지도는 파일이 아니다.
     if (provider != QLatin1String("ogr") && provider != QLatin1String("memory")) continue;
     if (provider == QLatin1String("ogr") && livesInGpkg(vl, gpkgPath)) continue;
-    if (provider == QLatin1String("ogr") && !alsoSurveyGpkg.isEmpty() &&
-        livesInGpkg(vl, alsoSurveyGpkg))
-      continue;
-    if ((LayerOps::isReferenceLayer(vl) || LayerOps::isCadastralLayer(vl)) &&
-        provider != QLatin1String("memory")) {
+    if (provider == QLatin1String("ogr") && !alsoSurveyGpkg.isEmpty() && livesInGpkg(vl, alsoSurveyGpkg)) continue;
+    if ((LayerOps::isReferenceLayer(vl) || LayerOps::isCadastralLayer(vl)) && provider != QLatin1String("memory")) {
       // 바깥 파일의 참조 지도·지적도는 조사 파일에 복사하지 않는다.
       // 메모리 레이어는 닫으면 사라진다. persistSurveyWork는 커밋을 먼저 하므로
       // isModified()만 보면 닫기 저장에서 빠진다.
@@ -750,7 +730,8 @@ AbsorbResult absorbExternalVectors(QgsProject* project, const QString& gpkgPath,
 
     QString target = sanitizeLayerName(vl->name());
     int suffix = 2;
-    while (used.contains(target)) target = sanitizeLayerName(vl->name()) + QStringLiteral("_%1").arg(suffix++);
+    while (used.contains(target))
+      target = sanitizeLayerName(vl->name()) + QStringLiteral("_%1").arg(suffix++);
 
     QgsVectorFileWriter::SaveVectorOptions opt;
     opt.driverName = QStringLiteral("GPKG");
@@ -775,8 +756,7 @@ AbsorbResult absorbExternalVectors(QgsProject* project, const QString& gpkgPath,
     }
     // 스타일·라벨은 레이어 객체에 남아 있으므로 데이터소스만 사본으로 돌린다.
     const QString name = vl->name();
-    vl->setDataSource(storedSource, name,
-                      QStringLiteral("ogr"));
+    vl->setDataSource(storedSource, name, QStringLiteral("ogr"));
     if (vl->isValid())
       r.imported << name;
     else
@@ -785,8 +765,7 @@ AbsorbResult absorbExternalVectors(QgsProject* project, const QString& gpkgPath,
   return r;
 }
 
-PersistAttempt persistWorkspace(QgsProject* project, const QString& gpkgPath,
-                                const QString& recoveryDirectory,
+PersistAttempt persistWorkspace(QgsProject* project, const QString& gpkgPath, const QString& recoveryDirectory,
                                 const QString& fallbackDirectory) {
   PersistAttempt attempt;
   if (!project || gpkgPath.isEmpty()) {
@@ -796,14 +775,12 @@ PersistAttempt persistWorkspace(QgsProject* project, const QString& gpkgPath,
 
   QHash<QString, QString> sources;
   for (QgsMapLayer* layer : project->mapLayers()) {
-    if (auto* vector = qobject_cast<QgsVectorLayer*>(layer))
-      sources.insert(vector->id(), vector->source());
+    if (auto* vector = qobject_cast<QgsVectorLayer*>(layer)) sources.insert(vector->id(), vector->source());
   }
 
   QTemporaryDir generationDir(QFileInfo(gpkgPath).dir().filePath(QStringLiteral(".ka-survey-gen-XXXXXX")));
-  const QString generation = generationDir.isValid()
-      ? generationDir.filePath(QStringLiteral("survey.gpkg"))
-      : QString();
+  const QString generation =
+      generationDir.isValid() ? generationDir.filePath(QStringLiteral("survey.gpkg")) : QString();
   // Stage timings go to the session log so the slow part of a large save can be measured.
   QElapsedTimer clock;
   clock.start();
@@ -821,10 +798,8 @@ PersistAttempt persistWorkspace(QgsProject* project, const QString& gpkgPath,
       if (vector && vector->isValid()) recoverable << vector->id();
     }
     QString recoveryError;
-    attempt.recoveryPath = writeRecoverySnapshot(project, recoveryDirectory, &recoveryError,
-                                                 recoverable);
-    if (attempt.recoveryPath.isEmpty() && !recoveryError.isEmpty())
-      attempt.error += QLatin1Char('\n') + recoveryError;
+    attempt.recoveryPath = writeRecoverySnapshot(project, recoveryDirectory, &recoveryError, recoverable);
+    if (attempt.recoveryPath.isEmpty() && !recoveryError.isEmpty()) attempt.error += QLatin1Char('\n') + recoveryError;
     restoreLayerSources(project, sources, publishing ? generation : QString());
     project->setDirty(true);
     if (!generation.isEmpty()) {
@@ -879,8 +854,7 @@ PersistAttempt persistWorkspace(QgsProject* project, const QString& gpkgPath,
     }
     remountCopiedSurveyLayers(project, generation);
   } else if (!copySurvey(gpkgPath, generation, &copyError)) {
-    recover(copyError.isEmpty() ? QStringLiteral("다음 세대 조사 파일을 만들지 못했습니다.")
-                                : copyError);
+    recover(copyError.isEmpty() ? QStringLiteral("다음 세대 조사 파일을 만들지 못했습니다.") : copyError);
     return attempt;
   }
 
@@ -901,8 +875,7 @@ PersistAttempt persistWorkspace(QgsProject* project, const QString& gpkgPath,
   QStringList blockedNames;
   QList<QgsVectorLayer*> appliedToGeneration;
   for (QgsVectorLayer* vector : ordered) {
-    if (!vector->isValid() || !vector->isEditable() || !vector->isModified())
-      continue;
+    if (!vector->isValid() || !vector->isEditable() || !vector->isModified()) continue;
     if (!vector->allowCommit()) {
       blockedNames << vector->name();
       attempt.failedLayers << vector->name();
@@ -910,12 +883,10 @@ PersistAttempt persistWorkspace(QgsProject* project, const QString& gpkgPath,
     }
     if (livesInGpkg(vector, gpkgPath)) {
       QString writeLayerError;
-      const CopyEdits copied =
-          applyEditBufferToCopy(vector, generation, gpkgTableName(vector), &writeLayerError);
+      const CopyEdits copied = applyEditBufferToCopy(vector, generation, gpkgTableName(vector), &writeLayerError);
       if (copied == CopyEdits::Failed ||
-          (copied == CopyEdits::SchemaChanged &&
-           !writeLayerToGpkg(vector, generation, gpkgTableName(vector), project->transformContext(),
-                             &writeLayerError))) {
+          (copied == CopyEdits::SchemaChanged && !writeLayerToGpkg(vector, generation, gpkgTableName(vector),
+                                                                   project->transformContext(), &writeLayerError))) {
         attempt.failedLayers << vector->name();
         recover(writeLayerError.isEmpty()
                     ? QStringLiteral("%1의 편집을 다음 세대 파일에 쓰지 못했습니다.").arg(vector->name())
@@ -945,8 +916,9 @@ PersistAttempt persistWorkspace(QgsProject* project, const QString& gpkgPath,
         attempt.failedLayers << vector->name();
       }
     }
-    QString message = QStringLiteral("%1의 편집을 저장하지 못해 전체 저장을 마치지 못했습니다. "
-                                     "미저장 편집은 유지됩니다.")
+    QString message = QStringLiteral(
+                          "%1의 편집을 저장하지 못해 전체 저장을 마치지 못했습니다. "
+                          "미저장 편집은 유지됩니다.")
                           .arg(blockedNames.join(QStringLiteral(", ")));
     if (!attempt.originalCommittedLayers.isEmpty())
       message += QStringLiteral(" 저장할 수 있던 %1은 원본 조사 파일에 먼저 저장했습니다.")
@@ -965,30 +937,29 @@ PersistAttempt persistWorkspace(QgsProject* project, const QString& gpkgPath,
                            .arg(collected.copied.size())
                            .arg(collected.copied.join(QStringLiteral(", "))));
   if (!collected.failed.isEmpty())
-    KaSessionLog::line(QStringLiteral("[save] 조사 폴더로 모으지 못한 자료 — %1")
-                           .arg(collected.failed.join(QStringLiteral(", "))));
+    KaSessionLog::line(
+        QStringLiteral("[save] 조사 폴더로 모으지 못한 자료 — %1").arg(collected.failed.join(QStringLiteral(", "))));
 
   const AbsorbResult absorbed = absorbExternalVectors(project, generation, gpkgPath);
   attempt.skippedRaster = absorbed.skippedRaster;
   attempt.skippedReference = absorbed.skippedReference;
   if (!absorbed.failed.isEmpty()) {
     attempt.failedLayers << absorbed.failed;
-    recover(QStringLiteral("%1을 조사 파일에 보관하지 못했습니다.")
-                .arg(absorbed.failed.join(QStringLiteral(", "))));
+    recover(QStringLiteral("%1을 조사 파일에 보관하지 못했습니다.").arg(absorbed.failed.join(QStringLiteral(", "))));
     return attempt;
   }
 
   QString writeError;
   try {
     if (!writeEmbedded(project, generation, &writeError, gpkgPath)) {
-      recover(writeError.isEmpty() ? QStringLiteral("조사 파일에 작업 구성을 저장하지 못했습니다.")
-                                   : writeError);
+      recover(writeError.isEmpty() ? QStringLiteral("조사 파일에 작업 구성을 저장하지 못했습니다.") : writeError);
       return attempt;
     }
   } catch (...) {
     KA_LOG_EXCEPT();
-    recover(QStringLiteral("저장 중 오류가 발생했습니다. 원본 조사 파일은 그대로입니다. "
-                           "창을 닫지 말고 다시 저장하세요."));
+    recover(
+        QStringLiteral("저장 중 오류가 발생했습니다. 원본 조사 파일은 그대로입니다. "
+                       "창을 닫지 말고 다시 저장하세요."));
     return attempt;
   }
   timings << QStringLiteral("모으기·흡수·작업공간 %1ms").arg(clock.restart());
@@ -1015,22 +986,17 @@ PersistAttempt persistWorkspace(QgsProject* project, const QString& gpkgPath,
   if (!publishSurveyGeneration(generation, gpkgPath, &publishError, &published)) {
     QString fallbackError;
     const QFileInfo requested(gpkgPath);
-    const QString fallbackDir =
-        !fallbackDirectory.trimmed().isEmpty() &&
-                (QFileInfo(fallbackDirectory).isDir() || QDir().mkpath(fallbackDirectory))
-            ? QFileInfo(fallbackDirectory).absoluteFilePath()
-            : QString();
-    const QString fallbackTarget = fallbackDir.isEmpty()
-        ? QString()
-        : QDir(fallbackDir).filePath(requested.fileName());
-    if (!fallbackTarget.isEmpty() &&
-        fallbackTarget.compare(published, Qt::CaseInsensitive) != 0 &&
+    const QString fallbackDir = !fallbackDirectory.trimmed().isEmpty() &&
+                                        (QFileInfo(fallbackDirectory).isDir() || QDir().mkpath(fallbackDirectory))
+                                    ? QFileInfo(fallbackDirectory).absoluteFilePath()
+                                    : QString();
+    const QString fallbackTarget = fallbackDir.isEmpty() ? QString() : QDir(fallbackDir).filePath(requested.fileName());
+    if (!fallbackTarget.isEmpty() && fallbackTarget.compare(published, Qt::CaseInsensitive) != 0 &&
         publishSurveyGeneration(generation, fallbackTarget, &fallbackError, &published)) {
-      KaSessionLog::line(QStringLiteral("[save] 원래 경로에 쓸 수 없어 이 폴더에 저장 — %1")
-                             .arg(QDir::toNativeSeparators(published)));
+      KaSessionLog::line(
+          QStringLiteral("[save] 원래 경로에 쓸 수 없어 이 폴더에 저장 — %1").arg(QDir::toNativeSeparators(published)));
     } else {
-      recover(publishError.isEmpty() ? QStringLiteral("검증된 다음 세대로 원본을 교체하지 못했습니다.")
-                                     : publishError);
+      recover(publishError.isEmpty() ? QStringLiteral("검증된 다음 세대로 원본을 교체하지 못했습니다.") : publishError);
       return attempt;
     }
   }
@@ -1039,10 +1005,8 @@ PersistAttempt persistWorkspace(QgsProject* project, const QString& gpkgPath,
   project->setFileName(originalAbs);
   project->setPresetHomePath(QFileInfo(originalAbs).absolutePath());
   for (QgsVectorLayer* vector : ordered) {
-    if (vector && livesInGpkg(vector, gpkgPath) && vector->isModified())
-      vector->rollBack(false);
-    if (vector && livesInGpkg(vector, published) && vector->isModified())
-      vector->rollBack(false);
+    if (vector && livesInGpkg(vector, gpkgPath) && vector->isModified()) vector->rollBack(false);
+    if (vector && livesInGpkg(vector, published) && vector->isModified()) vector->rollBack(false);
   }
   retargetGpkgLayers(project, generation, published);
   if (published.compare(QFileInfo(gpkgPath).absoluteFilePath(), Qt::CaseInsensitive) != 0)
@@ -1090,16 +1054,15 @@ ExtractAttempt extractEmbeddedReferenceVectors(QgsProject* project, const QStrin
     QString dest = QDir(outputDirectory).filePath(sanitizeLayerName(vl->name()) + QStringLiteral(".gpkg"));
     int suffix = 2;
     while (QFileInfo::exists(dest)) {
-      dest = QDir(outputDirectory).filePath(sanitizeLayerName(vl->name()) +
-                                            QStringLiteral("_%1.gpkg").arg(suffix++));
+      dest = QDir(outputDirectory).filePath(sanitizeLayerName(vl->name()) + QStringLiteral("_%1.gpkg").arg(suffix++));
     }
     QgsVectorFileWriter::SaveVectorOptions opt;
     opt.driverName = QStringLiteral("GPKG");
     opt.layerName = table;
     opt.fileEncoding = QStringLiteral("UTF-8");
     QString writeError;
-    if (QgsVectorFileWriter::writeAsVectorFormatV3(vl, dest, project->transformContext(), opt,
-                                                   &writeError) != QgsVectorFileWriter::NoError) {
+    if (QgsVectorFileWriter::writeAsVectorFormatV3(vl, dest, project->transformContext(), opt, &writeError) !=
+        QgsVectorFileWriter::NoError) {
       attempt.failed << vl->name();
       attempt.error = writeError;
       return attempt;
@@ -1130,17 +1093,14 @@ ExtractAttempt extractEmbeddedReferenceVectors(QgsProject* project, const QStrin
   }
   const QString generation = generationDir.filePath(QStringLiteral("survey.gpkg"));
   QString copyError;
-  if (!copySurvey(gpkgPath, generation, &copyError) ||
-      !dropGpkgTables(generation, tables, &copyError)) {
-    attempt.error = copyError.isEmpty() ? QStringLiteral("참조 테이블을 조사 파일에서 빼지 못했습니다.")
-                                        : copyError;
+  if (!copySurvey(gpkgPath, generation, &copyError) || !dropGpkgTables(generation, tables, &copyError)) {
+    attempt.error = copyError.isEmpty() ? QStringLiteral("참조 테이블을 조사 파일에서 빼지 못했습니다.") : copyError;
     return attempt;
   }
   QString writeError;
   try {
     if (!writeEmbedded(project, generation, &writeError, gpkgPath)) {
-      attempt.error = writeError.isEmpty() ? QStringLiteral("작업 구성을 저장하지 못했습니다.")
-                                           : writeError;
+      attempt.error = writeError.isEmpty() ? QStringLiteral("작업 구성을 저장하지 못했습니다.") : writeError;
       return attempt;
     }
   } catch (...) {
@@ -1162,8 +1122,7 @@ ExtractAttempt extractEmbeddedReferenceVectors(QgsProject* project, const QStrin
   dropIdleJournals(gpkgPath);
   QString publishError;
   if (!publishSurveyGeneration(generation, gpkgPath, &publishError)) {
-    attempt.error = publishError.isEmpty() ? QStringLiteral("줄어든 조사 파일로 교체하지 못했습니다.")
-                                           : publishError;
+    attempt.error = publishError.isEmpty() ? QStringLiteral("줄어든 조사 파일로 교체하지 못했습니다.") : publishError;
     return attempt;
   }
   const QString originalAbs = QFileInfo(gpkgPath).absoluteFilePath();
@@ -1176,8 +1135,7 @@ ExtractAttempt extractEmbeddedReferenceVectors(QgsProject* project, const QStrin
   return attempt;
 }
 
-bool writeEmbedded(QgsProject* project, const QString& gpkgPath, QString* errorOut,
-                   const QString& publishedGpkg) {
+bool writeEmbedded(QgsProject* project, const QString& gpkgPath, QString* errorOut, const QString& publishedGpkg) {
   if (!project || gpkgPath.isEmpty()) {
     if (errorOut) *errorOut = QStringLiteral("저장 경로가 없습니다.");
     return false;
@@ -1204,8 +1162,7 @@ bool writeEmbedded(QgsProject* project, const QString& gpkgPath, QString* errorO
   // 다음 세대는 surveyDir/.ka-survey-gen-*/survey.gpkg 다. 여기서 상대 경로를
   // 계산하면 ../ 가 하나 더 붙어, 다시 열 때 C:/Users/AppData/... 로 풀린다.
   // https://docs.qgis.org/3.44/en/docs/user_manual/introduction/qgis_configuration.html
-  if (QDir(home).dirName().startsWith(QLatin1String(".ka-survey-gen-")))
-    home = QFileInfo(home).absolutePath();
+  if (QDir(home).dirName().startsWith(QLatin1String(".ka-survey-gen-"))) home = QFileInfo(home).absolutePath();
   project->setPresetHomePath(home);
   // 옮긴 뒤 열 때 이 폴더 아래 경로를 새 조사 폴더 아래로 옮겨 붙인다(LayerOps::repairPersistedFileSources).
   SurveyBundle::rememberSurveyDir(project, home);
@@ -1214,8 +1171,7 @@ bool writeEmbedded(QgsProject* project, const QString& gpkgPath, QString* errorO
   QString pathWriter;
   if (!publishedGpkg.isEmpty()) {
     const QString generationFile = QDir::cleanPath(QDir::fromNativeSeparators(abs));
-    const QString finalFile =
-        QDir::cleanPath(QDir::fromNativeSeparators(QFileInfo(publishedGpkg).absoluteFilePath()));
+    const QString finalFile = QDir::cleanPath(QDir::fromNativeSeparators(QFileInfo(publishedGpkg).absoluteFilePath()));
     if (generationFile.compare(finalFile, Qt::CaseInsensitive) != 0) {
       pathWriter = QgsPathResolver::setPathWriter([generationFile, finalFile](const QString& path) {
         const QString clean = QDir::fromNativeSeparators(path);
@@ -1245,8 +1201,7 @@ bool writeEmbedded(QgsProject* project, const QString& gpkgPath, QString* errorO
   return true;
 }
 
-bool readEmbedded(QgsProject* project, const QString& gpkgPath, bool* crashedOut,
-                  QString* errorOut, bool loadLayouts) {
+bool readEmbedded(QgsProject* project, const QString& gpkgPath, bool* crashedOut, QString* errorOut, bool loadLayouts) {
   if (crashedOut) *crashedOut = false;
   if (!project || gpkgPath.isEmpty() || !QFileInfo::exists(gpkgPath)) {
     if (errorOut) *errorOut = QStringLiteral("조사 파일이 없습니다.");
@@ -1260,10 +1215,8 @@ bool readEmbedded(QgsProject* project, const QString& gpkgPath, bool* crashedOut
   const bool ok = readGuarded(project, uri, &crashed, loadLayouts);
   if (crashedOut) *crashedOut = crashed;
   if (!ok && errorOut)
-    *errorOut = crashed ? QStringLiteral("조사 파일 안의 작업공간을 읽다 오류가 났습니다.")
-                        : project->error();
-  if (ok && remountCopiedSurveyLayers(project, abs) > 0)
-    LayerOps::reloadSurveyGpkgReaders(project, abs);
+    *errorOut = crashed ? QStringLiteral("조사 파일 안의 작업공간을 읽다 오류가 났습니다.") : project->error();
+  if (ok && remountCopiedSurveyLayers(project, abs) > 0) LayerOps::reloadSurveyGpkgReaders(project, abs);
   return ok;
 }
 

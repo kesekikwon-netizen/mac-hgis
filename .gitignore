@@ -1,6 +1,8 @@
 # Build
 build/
 build-clangd/
+.sdk
+.sdk/
 out/
 cmake-build-*/
 CMakeCache.txt
@@ -32,6 +34,7 @@ Desktop.ini
 .DS_Store
 
 # Local agent / tooling caches (not product source)
+antigravity-sdk-python/
 .codegraph
 .codegraph/
 .omo/

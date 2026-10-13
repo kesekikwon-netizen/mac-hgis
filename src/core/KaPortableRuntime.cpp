@@ -1,15 +1,16 @@
-#include "KaSessionLog.h"
-#include "KaLogExcept.h"
 #include "KaPortableRuntime.h"
+#include "KaLogExcept.h"
+#include "KaPortableRuntimeMac.h"
+#include "KaSessionLog.h"
 #include "VworldSettings.h"
 
 #include <QByteArray>
 #include <QCoreApplication>
-#include <QDir>
-#include <QProcess>
 #include <QCryptographicHash>
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QProcess>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QStringList>
@@ -29,8 +30,8 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
-#include <windows.h>
 #include <stdlib.h>
+#include <windows.h>
 #endif
 
 #include <cmath>
@@ -45,8 +46,7 @@ static bool setEnvUtf8AndWide(const char* nameUtf8, const wchar_t* nameW, const 
   const QString native = QDir::toNativeSeparators(value);
   qputenv(nameUtf8, native.toUtf8());
   const std::wstring w = native.toStdWString();
-  if (_wputenv_s(nameW, w.c_str()) != 0)
-    return false;
+  if (_wputenv_s(nameW, w.c_str()) != 0) return false;
   return SetEnvironmentVariableW(nameW, w.c_str()) != 0;
 }
 #else
@@ -75,27 +75,20 @@ static bool isPureAscii(const QString& s) {
 
 #ifdef Q_OS_WIN
 static QString asciiAliasForBundle(const QString& dir) {
-  if (dir.isEmpty() || isPureAscii(dir))
-    return dir;
+  if (dir.isEmpty() || isPureAscii(dir)) return dir;
   // 사용자 이름조차 한글일 수 있으므로 반드시 ASCII 인 공용 폴더에 만든다.
   const QString base = QStringLiteral("C:/Users/Public/ka-hgis");
-  if (!QDir().mkpath(base))
-    return dir;
+  if (!QDir().mkpath(base)) return dir;
   const QByteArray h =
-      QCryptographicHash::hash(QDir::toNativeSeparators(dir).toUtf8(), QCryptographicHash::Sha1)
-          .toHex()
-          .left(12);
+      QCryptographicHash::hash(QDir::toNativeSeparators(dir).toUtf8(), QCryptographicHash::Sha1).toHex().left(12);
   const QString link = QDir(base).filePath(QStringLiteral("rt-") + QString::fromLatin1(h));
   // 이미 올바른 정션이 있으면 그대로 쓴다.
-  if (QFile::exists(QDir(link).filePath(QStringLiteral("apps/qgis-dev"))))
-    return link;
+  if (QFile::exists(QDir(link).filePath(QStringLiteral("apps/qgis-dev")))) return link;
   if (QDir(link).exists())
     QProcess::execute(QStringLiteral("cmd"), {QStringLiteral("/c"), QStringLiteral("rmdir"), link});
-  QProcess::execute(QStringLiteral("cmd"),
-                    {QStringLiteral("/c"), QStringLiteral("mklink"), QStringLiteral("/J"),
-                     QDir::toNativeSeparators(link), QDir::toNativeSeparators(dir)});
-  if (QFile::exists(QDir(link).filePath(QStringLiteral("apps/qgis-dev"))))
-    return link;
+  QProcess::execute(QStringLiteral("cmd"), {QStringLiteral("/c"), QStringLiteral("mklink"), QStringLiteral("/J"),
+                                            QDir::toNativeSeparators(link), QDir::toNativeSeparators(dir)});
+  if (QFile::exists(QDir(link).filePath(QStringLiteral("apps/qgis-dev")))) return link;
   return dir;  // 못 만들면 원래 경로로 간다(경고는 부팅 점검이 낸다).
 }
 #endif
@@ -108,9 +101,12 @@ KaPortablePaths KaPortableRuntime::discover(const QString& exeDir) {
   out.exeDir = QDir(asciiAliasForBundle(out.exeDir)).absolutePath();
 #endif
   const QDir app(out.exeDir);
+
+#if defined(Q_OS_MAC)
+  KaPortableRuntimeMac::discoverMac(out, app);
+#else
   const QString qgis = app.filePath(QStringLiteral("apps/qgis-dev"));
-  if (QDir(qgis).exists())
-    out.qgisPrefix = QDir(qgis).absolutePath();
+  if (QDir(qgis).exists()) out.qgisPrefix = QDir(qgis).absolutePath();
 
   const QString shareProj = app.filePath(QStringLiteral("share/proj"));
   if (QFile::exists(QDir(shareProj).filePath(QStringLiteral("proj.db"))))
@@ -119,28 +115,24 @@ KaPortablePaths KaPortableRuntime::discover(const QString& exeDir) {
     out.projData = out.exeDir;
 
   const QString gdal = app.filePath(QStringLiteral("apps/gdal-dev/share/gdal"));
-  if (QDir(gdal).exists())
-    out.gdalData = QDir(gdal).absolutePath();
+  if (QDir(gdal).exists()) out.gdalData = QDir(gdal).absolutePath();
 
   const QString ca = app.filePath(QStringLiteral("curl-ca-bundle.crt"));
-  if (QFile::exists(ca))
-    out.caBundle = QFileInfo(ca).absoluteFilePath();
+  if (QFile::exists(ca)) out.caBundle = QFileInfo(ca).absoluteFilePath();
 
   const QString qtPlug = app.filePath(QStringLiteral("apps/Qt6/plugins"));
-  if (QDir(qtPlug).exists())
-    out.qtPlugins = QDir(qtPlug).absolutePath();
+  if (QDir(qtPlug).exists()) out.qtPlugins = QDir(qtPlug).absolutePath();
 
   if (!out.qgisPrefix.isEmpty()) {
     const QString plug = QDir(out.qgisPrefix).filePath(QStringLiteral("plugins"));
-    if (QDir(plug).exists())
-      out.qgisPlugins = QDir(plug).absolutePath();
+    if (QDir(plug).exists()) out.qgisPlugins = QDir(plug).absolutePath();
   }
+#endif
   return out;
 }
 
 bool KaPortableRuntime::applyEnvironment(const KaPortablePaths& paths) {
-  if (!paths.looksBundled())
-    return false;
+  if (!paths.looksBundled()) return false;
 
   bool ok = true;
   ok = setEnvUtf8AndWide("OSGEO4W_ROOT", L"OSGEO4W_ROOT", paths.exeDir) && ok;
@@ -149,8 +141,7 @@ bool KaPortableRuntime::applyEnvironment(const KaPortablePaths& paths) {
     ok = setEnvUtf8AndWide("PROJ_DATA", L"PROJ_DATA", paths.projData) && ok;
     ok = setEnvUtf8AndWide("PROJ_LIB", L"PROJ_LIB", paths.projData) && ok;
   }
-  if (!paths.gdalData.isEmpty())
-    ok = setEnvUtf8AndWide("GDAL_DATA", L"GDAL_DATA", paths.gdalData) && ok;
+  if (!paths.gdalData.isEmpty()) ok = setEnvUtf8AndWide("GDAL_DATA", L"GDAL_DATA", paths.gdalData) && ok;
   if (!paths.caBundle.isEmpty()) {
     ok = setEnvUtf8AndWide("CURL_CA_BUNDLE", L"CURL_CA_BUNDLE", paths.caBundle) && ok;
     ok = setEnvUtf8AndWide("SSL_CERT_FILE", L"SSL_CERT_FILE", paths.caBundle) && ok;
@@ -172,8 +163,7 @@ bool KaPortableRuntime::applyEnvironment(const KaPortablePaths& paths) {
                       app.filePath(QStringLiteral("apps/Qt6/translations/qtwebengine_locales")));
   }
   const QString qgisPlug = QDir(paths.qgisPrefix).filePath(QStringLiteral("qtplugins"));
-  if (QDir(qgisPlug).exists())
-    QCoreApplication::addLibraryPath(qgisPlug);
+  if (QDir(qgisPlug).exists()) QCoreApplication::addLibraryPath(qgisPlug);
 
   QStringList prepend;
   const QStringList rels = {
@@ -186,19 +176,17 @@ bool KaPortableRuntime::applyEnvironment(const KaPortablePaths& paths) {
   };
   for (const QString& rel : rels) {
     const QString p = rel.isEmpty() ? paths.exeDir : app.filePath(rel);
-    if (QDir(p).exists())
-      prepend << QDir::toNativeSeparators(p);
+    if (QDir(p).exists()) prepend << QDir::toNativeSeparators(p);
   }
 #ifdef Q_OS_WIN
   wchar_t oldPath[32768];
   const DWORD n = GetEnvironmentVariableW(L"PATH", oldPath, 32768);
-  const QString old = n > 0 && n < 32768 ? QString::fromWCharArray(oldPath, int(n))
-                                         : QString::fromLocal8Bit(qgetenv("PATH"));
-#else
-  const QString old = QString::fromLocal8Bit(qgetenv("PATH"));
+  const QString old =
+      n > 0 && n < 32768 ? QString::fromWCharArray(oldPath, int(n)) : QString::fromLocal8Bit(qgetenv("PATH"));
+  ok = setEnvUtf8AndWide("PATH", L"PATH", prepend.join(QLatin1Char(';')) + QLatin1Char(';') + old) && ok;
+#elif defined(Q_OS_MAC)
+  ok = KaPortableRuntimeMac::applyMacEnvironment() && ok;
 #endif
-  ok = setEnvUtf8AndWide("PATH", L"PATH", prepend.join(QLatin1Char(';')) + QLatin1Char(';') + old) &&
-       ok;
 
 #ifdef Q_OS_WIN
   // 한글·공백이 든 경로(예: OneDrive\바탕 화면)에 폴더를 두면 provider_wms.dll 이
@@ -209,8 +197,7 @@ bool KaPortableRuntime::applyEnvironment(const KaPortablePaths& paths) {
   if (SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS)) {
     for (const QString& dir : prepend) {
       const std::wstring w = QDir::toNativeSeparators(dir).toStdWString();
-      if (!AddDllDirectory(w.c_str()))
-        ok = false;
+      if (!AddDllDirectory(w.c_str())) ok = false;
     }
   } else {
     // 이 API 를 못 쓰는 환경에서는 최소한 실행 폴더 하나라도 등록한다.
@@ -222,8 +209,7 @@ bool KaPortableRuntime::applyEnvironment(const KaPortablePaths& paths) {
 }
 
 bool KaPortableRuntime::bindProjSearchPaths(const QString& projDataDir) {
-  if (projDataDir.trimmed().isEmpty() || !QDir(projDataDir).exists())
-    return false;
+  if (projDataDir.trimmed().isEmpty() || !QDir(projDataDir).exists()) return false;
   const QByteArray utf8 = QDir::toNativeSeparators(QDir(projDataDir).absolutePath()).toUtf8();
   // PROJ 7+ / GDAL: UTF-8 경로. search_paths가 있으면 컴파일 타임 설치 경로
   // (개발 PC의 D:\OSGeo4W\share\proj)는 쓰지 않는다.
@@ -258,20 +244,21 @@ bool KaPortableRuntime::prependOsgeoPath() {
   QString root = QString::fromUtf8(qgetenv("OSGEO4W_ROOT"));
   if (root.isEmpty() || !QDir(root).exists()) {
     const QString prefix = QString::fromUtf8(qgetenv("QGIS_PREFIX_PATH"));
-    if (!prefix.isEmpty())
-      root = QDir(prefix).filePath(QStringLiteral("../.."));
+    if (!prefix.isEmpty()) root = QDir(prefix).filePath(QStringLiteral("../.."));
   }
   if (root.isEmpty() || !QDir(root).exists()) {
     for (const QString& cand : {QStringLiteral("C:/OSGeo4W"), QStringLiteral("D:/OSGeo4W")}) {
-      if (QDir(cand).exists()) { root = cand; break; }
+      if (QDir(cand).exists()) {
+        root = cand;
+        break;
+      }
     }
   }
   if (root.isEmpty() || !QDir(root).exists()) return false;
   const QDir app(QDir(root).absolutePath());
   QStringList prepend;
-  for (const QString& rel : {QStringLiteral("bin"), QStringLiteral("apps/qgis-dev/bin"),
-                             QStringLiteral("apps/Qt6/bin"), QStringLiteral("apps/gdal-dev/bin"),
-                             QStringLiteral("apps/pdal-dev/bin")}) {
+  for (const QString& rel : {QStringLiteral("bin"), QStringLiteral("apps/qgis-dev/bin"), QStringLiteral("apps/Qt6/bin"),
+                             QStringLiteral("apps/gdal-dev/bin"), QStringLiteral("apps/pdal-dev/bin")}) {
     const QString p = app.filePath(rel);
     if (QDir(p).exists()) prepend << QDir::toNativeSeparators(p);
   }
@@ -299,8 +286,7 @@ void KaPortableRuntime::isolateUserState(const KaPortablePaths& paths) {
   // KA_HGIS_SETTINGS_DIR (QA runs of a development build) asks for the bundle's isolation, so a
   // smoke or capture run leaves the user's ini, key store and QGIS profile alone.
   const QString qaDir = qEnvironmentVariable("KA_HGIS_SETTINGS_DIR").trimmed();
-  if (!paths.looksBundled() && qaDir.isEmpty())
-    return;
+  if (!paths.looksBundled() && qaDir.isEmpty()) return;
   const QString cfg = qaDir.isEmpty() ? QDir(paths.exeDir).filePath(QStringLiteral("config")) : qaDir;
   QDir().mkpath(cfg);
   // 다른 PC에 남은 이전 설치 AppData/레지스트리를 쓰지 않는다.
@@ -314,8 +300,8 @@ void KaPortableRuntime::isolateUserState(const KaPortablePaths& paths) {
   }
   const QString inherited = qaDir.isEmpty() ? inheritSiblingSettings(paths.exeDir, cfg) : QString();
   if (!inherited.isEmpty())
-    KaSessionLog::line(QStringLiteral("[boot] 이전 포터블의 설정을 이어받음 — %1")
-                           .arg(QDir::toNativeSeparators(inherited)));
+    KaSessionLog::line(
+        QStringLiteral("[boot] 이전 포터블의 설정을 이어받음 — %1").arg(QDir::toNativeSeparators(inherited)));
   const QString qgisProfile = QDir(cfg).filePath(QStringLiteral("qgis-profile"));
   QDir().mkpath(qgisProfile);
   setEnvUtf8AndWide("QGIS_CUSTOM_CONFIG_PATH", L"QGIS_CUSTOM_CONFIG_PATH", qgisProfile);
@@ -345,10 +331,8 @@ QString KaPortableRuntime::inheritSiblingSettings(const QString& exeDir, const Q
 }
 
 QString KaPortableRuntime::resolvedExeDir() {
-  if (!g_exeDirOverride.isEmpty())
-    return QDir(g_exeDirOverride).absolutePath();
-  if (QCoreApplication::instance())
-    return QCoreApplication::applicationDirPath();
+  if (!g_exeDirOverride.isEmpty()) return QDir(g_exeDirOverride).absolutePath();
+  if (QCoreApplication::instance()) return QCoreApplication::applicationDirPath();
   return {};
 }
 
@@ -377,13 +361,11 @@ bool KaPortableRuntime::koreaWorkAndWebCrsValid() {
   const QgsCoordinateReferenceSystem work(QStringLiteral("EPSG:5186"));
   const QgsCoordinateReferenceSystem east(QStringLiteral("EPSG:5187"));
   const QgsCoordinateReferenceSystem web(QStringLiteral("EPSG:3857"));
-  if (!work.isValid() || !east.isValid() || !web.isValid())
-    return false;
+  if (!work.isValid() || !east.isValid() || !web.isValid()) return false;
   try {
     QgsCoordinateTransform xf(web, work, QgsCoordinateTransformContext());
     xf.setBallparkTransformsAreAppropriate(true);
-    if (!xf.isValid())
-      return false;
+    if (!xf.isValid()) return false;
     const QgsPointXY out = xf.transform(QgsPointXY(14135000.0, 4510000.0));
     return std::isfinite(out.x()) && std::isfinite(out.y());
   } catch (...) {

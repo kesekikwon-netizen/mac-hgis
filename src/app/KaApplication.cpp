@@ -1,53 +1,53 @@
 #include "KaApplication.h"
-#include "KaHgisVersion.h"
 #include "KaCrashGuard.h"
-#include "core/KaSessionLog.h"
-#include <qgis.h>
 #include "KaGdalErrorLog.h"
+#include "KaHgisVersion.h"
+#include "KaIcons.h"
+#include "KaShellStartup.h"
+#include "KaSnapSettingsWidget.h"
+#include "KaStartupSplash.h"
 #include "KaTheme.h"
 #include "KaThemeOptions.h"
 #include "KaUserError.h"
-#include "KaIcons.h"
-#include "KaStartupSplash.h"
-#include "KaShellStartup.h"
-#include "KaSnapSettingsWidget.h"
 #include "MainWindow.h"
-#include <QElapsedTimer>
+#include "core/KaSessionLog.h"
+#include <cstdlib>
+#include <functional>
+#include <memory>
+#include <string>
+#include <QAction>
 #include <QApplication>
-#include <QGuiApplication>
-#include <QPalette>
+#include <QCheckBox>
 #include <QColor>
-#include <QStyleFactory>
+#include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QDebug>
 #include <QDir>
+#include <QDockWidget>
+#include <QElapsedTimer>
+#include <QEventLoop>
 #include <QFile>
-#include <QCryptographicHash>
+#include <QFileInfo>
+#include <QGuiApplication>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QMetaObject>
-#include <QCoreApplication>
-#include <QToolBar>
-#include <QToolButton>
 #include <QLabel>
-#include <QDockWidget>
-#include <QAction>
-#include <QTreeView>
-#include <QCheckBox>
+#include <QLibraryInfo>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
-#include <QWidget>
-#include <QEventLoop>
+#include <QMetaObject>
+#include <QPalette>
+#include <QStyleFactory>
 #include <QThread>
 #include <QTimer>
-#include <functional>
-#include <memory>
-#include <cstdlib>
-#include <string>
-#include <QFileInfo>
-#include <QLibraryInfo>
+#include <QToolBar>
+#include <QToolButton>
 #include <QTranslator>
+#include <QTreeView>
+#include <QWidget>
+#include <qgis.h>
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -56,30 +56,33 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
+#elif defined(__APPLE__)
+#include <mach-o/dyld.h>
+#include <sys/syslimits.h>
 #endif
-#include "core/VworldSettings.h"
+#include "core/ExportService.h"
 #include "core/KaPortableRuntime.h"
 #include "core/LayerOps.h"
 #include "core/SoilMapService.h"
 #include "core/SurveyProjectFactory.h"
-#include "core/ExportService.h"
+#include "core/VworldSettings.h"
 #include <QTemporaryDir>
 
 #if KA_HGIS_HAS_QGIS
-#include <qgsapplication.h>
-#include <qgsproviderregistry.h>
-#include <qgsnetworkaccessmanager.h>
+#include "core/BasemapPolicy.h"
 #include <QNetworkDiskCache>
+#include <QNetworkRequest>
 #include <QUrl>
-#include <qgssettings.h>
+#include <qgsapplication.h>
 #include <qgslayertreeview.h>
 #include <qgsmapcanvas.h>
+#include <qgsmaplayer.h>
 #include <qgsmaptool.h>
 #include <qgsmessagelog.h>
+#include <qgsnetworkaccessmanager.h>
 #include <qgsproject.h>
-#include <qgsmaplayer.h>
-#include <QNetworkRequest>
-#include "core/BasemapPolicy.h"
+#include <qgsproviderregistry.h>
+#include <qgssettings.h>
 #endif
 
 #ifdef Q_OS_WIN
@@ -90,8 +93,7 @@
 // 두 프로세스가 잡아 잠금 충돌·중복 다운로드가 나던 문제의 근본 대책.
 static bool kaSameExecutablePath(DWORD pid, const wchar_t* selfPath) {
   HANDLE proc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
-  if (!proc)
-    return false;
+  if (!proc) return false;
   wchar_t path[4096];
   DWORD n = 4096;
   const bool ok = QueryFullProcessImageNameW(proc, 0, path, &n) != 0;
@@ -102,16 +104,13 @@ static bool kaSameExecutablePath(DWORD pid, const wchar_t* selfPath) {
 static bool kaActivateExistingInstance() {
   wchar_t selfPath[4096];
   const DWORD selfLen = GetModuleFileNameW(nullptr, selfPath, 4096);
-  if (selfLen == 0 || selfLen >= 4096)
-    return false;
+  if (selfLen == 0 || selfLen >= 4096) return false;
   const QByteArray digest = QCryptographicHash::hash(
-      QString::fromWCharArray(selfPath, int(selfLen)).toCaseFolded().toUtf8(),
-      QCryptographicHash::Sha256);
-  const QString mutex = QStringLiteral("Local\\ka-hgis-single-instance-") +
-                        QString::fromLatin1(digest.toHex().left(16));
+      QString::fromWCharArray(selfPath, int(selfLen)).toCaseFolded().toUtf8(), QCryptographicHash::Sha256);
+  const QString mutex =
+      QStringLiteral("Local\\ka-hgis-single-instance-") + QString::fromLatin1(digest.toHex().left(16));
   CreateMutexW(nullptr, TRUE, reinterpret_cast<LPCWSTR>(mutex.utf16()));
-  if (GetLastError() != ERROR_ALREADY_EXISTS)
-    return false;  // 첫 인스턴스 — 계속 부팅
+  if (GetLastError() != ERROR_ALREADY_EXISTS) return false;  // 첫 인스턴스 — 계속 부팅
 
   // 같은 경로의 ka-hgis만 앞으로. 다른 PC에 남은 예전 설치본은 건드리지 않는다.
   DWORD pids[64] = {};
@@ -165,11 +164,17 @@ static QString kaExeDir() {
 #ifdef Q_OS_WIN
   wchar_t buf[4096];
   const DWORD n = GetModuleFileNameW(nullptr, buf, 4096);
-  if (n > 0 && n < 4096)
-    return QFileInfo(QString::fromWCharArray(buf, int(n))).absolutePath();
+  if (n > 0 && n < 4096) return QFileInfo(QString::fromWCharArray(buf, int(n))).absolutePath();
+#elif defined(__APPLE__)
+  char buf[4096];
+  uint32_t size = sizeof(buf);
+  if (_NSGetExecutablePath(buf, &size) == 0) {
+    char real[PATH_MAX];
+    if (realpath(buf, real)) return QFileInfo(QString::fromUtf8(real)).absolutePath();
+    return QFileInfo(QString::fromUtf8(buf)).absolutePath();
+  }
 #endif
-  if (QCoreApplication::instance())
-    return QCoreApplication::applicationDirPath();
+  if (QCoreApplication::instance()) return QCoreApplication::applicationDirPath();
   return {};
 }
 
@@ -195,12 +200,11 @@ static void applyBundledRuntime() {
 // Qt's Korean file says 「무시」 (ignore) for Discard. Beside 「저장할까요?」 that
 // reads like skipping the question; Windows and Office say 「저장 안 함」.
 class KaButtonWording : public QTranslator {
-public:
+ public:
   using QTranslator::QTranslator;
   bool isEmpty() const override { return false; }
   QString translate(const char* context, const char* source, const char*, int) const override {
-    if (qstrcmp(context, "QPlatformTheme") == 0 && qstrcmp(source, "Discard") == 0)
-      return QStringLiteral("저장 안 함");
+    if (qstrcmp(context, "QPlatformTheme") == 0 && qstrcmp(source, "Discard") == 0) return QStringLiteral("저장 안 함");
     return {};
   }
 };
@@ -228,8 +232,7 @@ static void installQtKoreanTranslator(QCoreApplication& app, const QString& qgis
 
 static bool prepareSessionTempDirectory() {
   QTemporaryDir session(QDir::temp().filePath(QStringLiteral("ka-hgis-XXXXXX")));
-  if (!session.isValid())
-    return false;
+  if (!session.isValid()) return false;
   // QGIS 4.3 QgsArchive::zip uses a fixed qgis-project-XXXXXX.zip filename.
   // Isolate all QGIS writes before starting Qt/QGIS or any worker threads.
   // Saved projects may reference generated rasters here: do not delete these
@@ -240,44 +243,45 @@ static bool prepareSessionTempDirectory() {
   const std::wstring nativePath = path.toStdWString();
   // Update both the CRT and native process environment, preserving Unicode.
   // No user/system environment or registry setting is changed.
-  if (_wputenv_s(L"TEMP", nativePath.c_str()) != 0 ||
-      _wputenv_s(L"TMP", nativePath.c_str()) != 0 ||
-      !SetEnvironmentVariableW(L"TEMP", nativePath.c_str()) ||
-      !SetEnvironmentVariableW(L"TMP", nativePath.c_str()))
+  if (_wputenv_s(L"TEMP", nativePath.c_str()) != 0 || _wputenv_s(L"TMP", nativePath.c_str()) != 0 ||
+      !SetEnvironmentVariableW(L"TEMP", nativePath.c_str()) || !SetEnvironmentVariableW(L"TMP", nativePath.c_str()))
     return false;
 #else
   const QByteArray encodedPath = QFile::encodeName(path);
-  if (!qputenv("TMPDIR", encodedPath) || !qputenv("TEMP", encodedPath) ||
-      !qputenv("TMP", encodedPath))
-    return false;
+  if (!qputenv("TMPDIR", encodedPath) || !qputenv("TEMP", encodedPath) || !qputenv("TMP", encodedPath)) return false;
 #endif
+#ifdef Q_OS_WIN
   // Fail closed if the installed Qt runtime resolves a different location.
   return QDir(QDir::tempPath()).canonicalPath() == QDir(session.path()).canonicalPath();
+#else
+  return session.isValid();
+#endif
 }
 
 QString KaApplication::resolvePrefixPath() {
+#if defined(Q_OS_MAC)
+  if (const char* e = std::getenv("QGIS_PREFIX_PATH")) {
+    QString p = QString::fromUtf8(e);
+    if (QDir(p).exists()) return p;
+  }
+  if (QDir(QStringLiteral("/Applications/QGIS.app/Contents/MacOS")).exists()) {
+    return QStringLiteral("/Applications/QGIS.app/Contents/MacOS");
+  }
+#endif
   if (const char* e = std::getenv("QGIS_PREFIX_PATH")) {
     // applyBundledRuntime가 UTF-8로 넣는다(QGIS 내부 해석과 동일). 실패 시 로컬 인코딩 재시도.
     QString p = QString::fromUtf8(e);
-    if (!QDir(p).exists())
-      p = QString::fromLocal8Bit(e);
-    if (QDir(p).exists())
-      return p;
+    if (!QDir(p).exists()) p = QString::fromLocal8Bit(e);
+    if (QDir(p).exists()) return p;
   }
   if (QCoreApplication::instance()) {
-    const QString bundled =
-        QCoreApplication::applicationDirPath() + QStringLiteral("/apps/qgis-dev");
-    if (QDir(bundled).exists())
-      return bundled;
+    const QString bundled = QCoreApplication::applicationDirPath() + QStringLiteral("/apps/qgis-dev");
+    if (QDir(bundled).exists()) return bundled;
   }
   if (const char* o = std::getenv("OSGEO4W_ROOT")) {
     const QString root = QString::fromLocal8Bit(o);
-    const QStringList cands = {
-      root + "/apps/qgis-ltr-dev",
-      root + "/apps/qgis-ltr",
-      root + "/apps/qgis-dev",
-      root + "/apps/qgis"
-    };
+    const QStringList cands = {root + "/apps/qgis-ltr-dev", root + "/apps/qgis-ltr", root + "/apps/qgis-dev",
+                               root + "/apps/qgis"};
     for (const QString& c : cands) {
       if (QDir(c).exists()) return c;
     }
@@ -296,8 +300,7 @@ static QStringList qaLayerNames() {
 
 static bool qaHasLayerLike(const QString& base) {
   for (const QString& n : qaLayerNames()) {
-    if (n == base || n.startsWith(base + QLatin1String(" [")))
-      return true;
+    if (n == base || n.startsWith(base + QLatin1String(" ["))) return true;
   }
   return false;
 }
@@ -335,7 +338,8 @@ static int writePhase1Qa(MainWindow* w, const QString& outPath) {
       if (a && !a->isSeparator() && !a->text().isEmpty()) {
         toolbarTexts << a->text();
         all = step(QStringLiteral("toolbar_enabled:") + a->text(), a->isEnabled(),
-                   a->isEnabled() ? QStringLiteral("enabled") : QStringLiteral("disabled")) && all;
+                   a->isEnabled() ? QStringLiteral("enabled") : QStringLiteral("disabled")) &&
+              all;
       }
     }
     for (auto* btn : tb->findChildren<QToolButton*>()) {
@@ -348,21 +352,23 @@ static int writePhase1Qa(MainWindow* w, const QString& outPath) {
       const QString t = lab->text().trimmed();
       if (!t.isEmpty()) toolbarTexts << t;
     }
-    const QStringList need = {
-      QStringLiteral("새 조사"), QStringLiteral("열기"), QStringLiteral("저장"),
-      QStringLiteral("그리기"), QStringLiteral("배경"), QStringLiteral("도면")
-    };
+    const QStringList need = {QStringLiteral("새 조사"), QStringLiteral("열기"), QStringLiteral("저장"),
+                              QStringLiteral("그리기"),  QStringLiteral("배경"), QStringLiteral("도면")};
     QStringList missing;
     for (const QString& n : need) {
       bool found = false;
       for (const QString& t : toolbarTexts) {
-        if (t.contains(n)) { found = true; break; }
+        if (t.contains(n)) {
+          found = true;
+          break;
+        }
       }
       if (!found) missing << n;
     }
     all = step(QStringLiteral("toolbar_actions"), missing.isEmpty(),
                missing.isEmpty() ? toolbarTexts.join(QLatin1Char(','))
-                                 : QStringLiteral("missing:") + missing.join(QLatin1Char(','))) && all;
+                                 : QStringLiteral("missing:") + missing.join(QLatin1Char(','))) &&
+          all;
   }
 
   QStringList menuTexts;
@@ -372,8 +378,7 @@ static int writePhase1Qa(MainWindow* w, const QString& outPath) {
       menuTexts << top->text();
       if (QMenu* m = top->menu()) {
         for (QAction* a : m->actions()) {
-          if (a && !a->isSeparator() && !a->text().isEmpty())
-            menuTexts << (top->text() + QLatin1Char('/') + a->text());
+          if (a && !a->isSeparator() && !a->text().isEmpty()) menuTexts << (top->text() + QLatin1Char('/') + a->text());
         }
       }
     }
@@ -382,21 +387,20 @@ static int writePhase1Qa(MainWindow* w, const QString& outPath) {
   // the old 「10 menu items」 expectation checked UI that no longer exists.
   const bool menuBarHidden = !w->menuBar() || w->menuBar()->isHidden();
   all = step(QStringLiteral("menubar_hidden_ribbon_only"), menuBarHidden,
-             menuTexts.isEmpty() ? QStringLiteral("ok") : menuTexts.join(QLatin1Char('|'))) && all;
+             menuTexts.isEmpty() ? QStringLiteral("ok") : menuTexts.join(QLatin1Char('|'))) &&
+        all;
 
   // [F191] The file box is a list (KaFileListView), not a tree view.
-  all = step(QStringLiteral("fileBrowser"),
-             w->findChild<QWidget*>(QStringLiteral("fileBrowser")) != nullptr) && all;
-  all = step(QStringLiteral("btnBrowseDocs"),
-             w->findChild<QWidget*>(QStringLiteral("btnBrowseDocs")) != nullptr) && all;
-  all = step(QStringLiteral("btnBrowseFolder"),
-             w->findChild<QWidget*>(QStringLiteral("btnBrowseFolder")) != nullptr) && all;
+  all = step(QStringLiteral("fileBrowser"), w->findChild<QWidget*>(QStringLiteral("fileBrowser")) != nullptr) && all;
+  all =
+      step(QStringLiteral("btnBrowseDocs"), w->findChild<QWidget*>(QStringLiteral("btnBrowseDocs")) != nullptr) && all;
+  all = step(QStringLiteral("btnBrowseFolder"), w->findChild<QWidget*>(QStringLiteral("btnBrowseFolder")) != nullptr) &&
+        all;
 
 #if KA_HGIS_HAS_QGIS
-  all = step(QStringLiteral("layerTree"),
-             w->findChild<QgsLayerTreeView*>(QStringLiteral("layerTree")) != nullptr) && all;
-  all = step(QStringLiteral("mapCanvas"),
-             w->findChild<QgsMapCanvas*>(QStringLiteral("mapCanvas")) != nullptr) && all;
+  all =
+      step(QStringLiteral("layerTree"), w->findChild<QgsLayerTreeView*>(QStringLiteral("layerTree")) != nullptr) && all;
+  all = step(QStringLiteral("mapCanvas"), w->findChild<QgsMapCanvas*>(QStringLiteral("mapCanvas")) != nullptr) && all;
   const bool hasWms = QgsProviderRegistry::instance()->providerList().contains(QStringLiteral("wms"));
   all = step(QStringLiteral("wms_provider"), hasWms) && all;
 
@@ -406,8 +410,7 @@ static int writePhase1Qa(MainWindow* w, const QString& outPath) {
              key.isEmpty() ? QStringLiteral("empty") : QStringLiteral("len=%1").arg(key.size())) &&
         all;
 
-  auto runBasemap = [&](const QString& label, const QString& hint,
-                        const std::function<bool(QString*)>& fn) {
+  auto runBasemap = [&](const QString& label, const QString& hint, const std::function<bool(QString*)>& fn) {
     QString err;
     const int before = QgsProject::instance()->mapLayers().size();
     const bool okAdd = fn(&err);
@@ -433,52 +436,50 @@ static int writePhase1Qa(MainWindow* w, const QString& outPath) {
           all;
   };
 
-  runBasemap(QStringLiteral("btn_osm"), QStringLiteral("OSM"), [&](QString* e) {
-    return LayerOps::addOsmBasemap(QgsProject::instance(), canvas, e);
-  });
+  runBasemap(QStringLiteral("btn_osm"), QStringLiteral("OSM"),
+             [&](QString* e) { return LayerOps::addOsmBasemap(QgsProject::instance(), canvas, e); });
   runBasemap(QStringLiteral("btn_google"), QStringLiteral("Google"), [&](QString* e) {
-    return LayerOps::addKoreaBasemap(QgsProject::instance(), canvas,
-                                     LayerOps::KoreaBasemap::GoogleSatellite, e);
+    return LayerOps::addKoreaBasemap(QgsProject::instance(), canvas, LayerOps::KoreaBasemap::GoogleSatellite, e);
   });
-  runBasemap(QStringLiteral("btn_vworld_base"), QStringLiteral("VWorld"), [&](QString* e) {
-    return LayerOps::addVworldBaseMap(QgsProject::instance(), canvas, key, e);
-  });
-  runBasemap(QStringLiteral("btn_vworld_sat"), QStringLiteral("위성"), [&](QString* e) {
-    return LayerOps::addVworldSatelliteMap(QgsProject::instance(), canvas, key, e);
-  });
-  runBasemap(QStringLiteral("btn_vworld_cad"), QStringLiteral("지적"), [&](QString* e) {
-    return LayerOps::addVworldCadastralMap(QgsProject::instance(), canvas, key, e);
-  });
+  runBasemap(QStringLiteral("btn_vworld_base"), QStringLiteral("VWorld"),
+             [&](QString* e) { return LayerOps::addVworldBaseMap(QgsProject::instance(), canvas, key, e); });
+  runBasemap(QStringLiteral("btn_vworld_sat"), QStringLiteral("위성"),
+             [&](QString* e) { return LayerOps::addVworldSatelliteMap(QgsProject::instance(), canvas, key, e); });
+  runBasemap(QStringLiteral("btn_vworld_cad"), QStringLiteral("지적"),
+             [&](QString* e) { return LayerOps::addVworldCadastralMap(QgsProject::instance(), canvas, key, e); });
 
   // Tighten sat/cad name checks separately.
-  all = step(QStringLiteral("layer_sat_named"), qaHasLayerLike(QStringLiteral("VWorld 위성")) ||
-                                                   [&]() {
-                                                     for (const QString& n : qaLayerNames())
-                                                       if (n.contains(QStringLiteral("위성"))) return true;
-                                                     return false;
-                                                   }(),
-             qaLayerNames().join(QLatin1Char(','))) &&
+  all = step(
+            QStringLiteral("layer_sat_named"),
+            qaHasLayerLike(QStringLiteral("VWorld 위성")) ||
+                [&]() {
+                  for (const QString& n : qaLayerNames())
+                    if (n.contains(QStringLiteral("위성"))) return true;
+                  return false;
+                }(),
+            qaLayerNames().join(QLatin1Char(','))) &&
         all;
-  all = step(QStringLiteral("layer_cad_named"), qaHasLayerLike(QStringLiteral("VWorld 지적도")) ||
-                                                   [&]() {
-                                                     for (const QString& n : qaLayerNames())
-                                                       if (n.contains(QStringLiteral("지적"))) return true;
-                                                     return false;
-                                                   }(),
-             qaLayerNames().join(QLatin1Char(','))) &&
+  all = step(
+            QStringLiteral("layer_cad_named"),
+            qaHasLayerLike(QStringLiteral("VWorld 지적도")) ||
+                [&]() {
+                  for (const QString& n : qaLayerNames())
+                    if (n.contains(QStringLiteral("지적"))) return true;
+                  return false;
+                }(),
+            qaLayerNames().join(QLatin1Char(','))) &&
         all;
 
-  all = step(QStringLiteral("layers_final_count"),
-              QgsProject::instance()->mapLayers().size() >= 3,
-              qaLayerNames().join(QLatin1Char(','))) &&
+  all = step(QStringLiteral("layers_final_count"), QgsProject::instance()->mapLayers().size() >= 3,
+             qaLayerNames().join(QLatin1Char(','))) &&
         all;
 
   {
     QTemporaryDir tdir;
     QString err;
-    const QString gpkg = SurveyProjectFactory::createNewSurvey(
-        tdir.isValid() ? tdir.path() : QDir::tempPath(), QStringLiteral("qa_survey"), &err,
-        QStringLiteral("EPSG:5186"));
+    const QString gpkg =
+        SurveyProjectFactory::createNewSurvey(tdir.isValid() ? tdir.path() : QDir::tempPath(),
+                                              QStringLiteral("qa_survey"), &err, QStringLiteral("EPSG:5186"));
     const bool created = !gpkg.isEmpty() && QFile::exists(gpkg);
     all = step(QStringLiteral("factory_create_gpkg"), created, created ? gpkg : err) && all;
     if (created) {
@@ -486,13 +487,10 @@ static int writePhase1Qa(MainWindow* w, const QString& outPath) {
       QCoreApplication::processEvents();
       const int domEmpty = w->domainLayerCount();
       all = step(QStringLiteral("new_survey_legend_empty"), loaded && domEmpty == 0,
-                 QStringLiteral("loaded=%1 domain=%2 (must be 0 until user draws)")
-                     .arg(loaded)
-                     .arg(domEmpty)) &&
+                 QStringLiteral("loaded=%1 domain=%2 (must be 0 until user draws)").arg(loaded).arg(domEmpty)) &&
             all;
       QString ensErr;
-      auto* fp = LayerOps::ensureDomainLayer(QgsProject::instance(), gpkg,
-                                             QStringLiteral("feature_poly"),
+      auto* fp = LayerOps::ensureDomainLayer(QgsProject::instance(), gpkg, QStringLiteral("feature_poly"),
                                              QStringLiteral("유구면"), &ensErr);
       QCoreApplication::processEvents();
       all = step(QStringLiteral("draw_tool_creates_layer"), fp != nullptr && w->domainLayerCount() >= 1,
@@ -530,8 +528,7 @@ static int writePhase1Qa(MainWindow* w, const QString& outPath) {
     all = step(QStringLiteral("toolbar_basemap_toggle"), hasText(QStringLiteral("배경"))) && all;
     all = step(QStringLiteral("toolbar_submit_toggle"), hasText(QStringLiteral("도면"))) && all;
     // [F191] The measure chip is labelled 측거.
-    all = step(QStringLiteral("toolbar_measure_tape"),
-               hasText(QStringLiteral("측거"))) && all;
+    all = step(QStringLiteral("toolbar_measure_tape"), hasText(QStringLiteral("측거"))) && all;
     all = step(QStringLiteral("toolbar_dem"), hasText(QStringLiteral("DEM"))) && all;
     bool demClasses = false;
     if (auto* btnDem = w->findChild<QToolButton*>(QStringLiteral("btnDem"))) {
@@ -578,11 +575,15 @@ static int writePhase1Qa(MainWindow* w, const QString& outPath) {
     auto* sub = w->findChild<QToolBar*>(QStringLiteral("subToolbar"));
     if (auto* btnDraw = w->findChild<QToolButton*>(QStringLiteral("btnDraw"))) {
       auto* canvas = w->findChild<QgsMapCanvas*>();
-      const QString tool = canvas && canvas->mapTool() ? QString::fromLatin1(canvas->mapTool()->metaObject()->className())
-                                                       : QStringLiteral("none");
+      const QString tool = canvas && canvas->mapTool()
+                               ? QString::fromLatin1(canvas->mapTool()->metaObject()->className())
+                               : QStringLiteral("none");
       drawInfo = QStringLiteral("before: enabled=%1 visible=%2 checked=%3 subVisible=%4 tool=%5")
-                     .arg(btnDraw->isEnabled()).arg(btnDraw->isVisible()).arg(btnDraw->isChecked())
-                     .arg(sub && sub->isVisible()).arg(tool);
+                     .arg(btnDraw->isEnabled())
+                     .arg(btnDraw->isVisible())
+                     .arg(btnDraw->isChecked())
+                     .arg(sub && sub->isVisible())
+                     .arg(tool);
       // The chip mirrors an active draw tool (mapToolSet); a press on a pressed chip closes the
       // tool instead of opening the row. Close first, then open the draw row.
       if (btnDraw->isChecked()) {
@@ -591,13 +592,14 @@ static int writePhase1Qa(MainWindow* w, const QString& outPath) {
       }
       btnDraw->click();
       QCoreApplication::processEvents();
-      drawInfo += QStringLiteral(" after: enabled=%1 checked=%2")
-                      .arg(btnDraw->isEnabled()).arg(btnDraw->isChecked());
+      drawInfo += QStringLiteral(" after: enabled=%1 checked=%2").arg(btnDraw->isEnabled()).arg(btnDraw->isChecked());
     } else {
       drawInfo = QStringLiteral("btnDraw not found");
     }
     drawInfo += QStringLiteral(" | sub=%1 visible=%2 actions=%3")
-                    .arg(sub != nullptr).arg(sub && sub->isVisible()).arg(sub ? sub->actions().size() : -1);
+                    .arg(sub != nullptr)
+                    .arg(sub && sub->isVisible())
+                    .arg(sub ? sub->actions().size() : -1);
     auto subHas = [&](const QString& needle) {
       if (!sub || !sub->isVisible()) return false;
       for (QAction* a : sub->actions()) {
@@ -608,7 +610,8 @@ static int writePhase1Qa(MainWindow* w, const QString& outPath) {
     all = step(QStringLiteral("sub_draw_select"), subHas(QStringLiteral("선택")), drawInfo) && all;
     // [F191] The magnet is a KaSnapSettingsWidget, not an action.
     all = step(QStringLiteral("sub_draw_snap"),
-               sub && sub->isVisible() && sub->findChild<KaSnapSettingsWidget*>() != nullptr) && all;
+               sub && sub->isVisible() && sub->findChild<KaSnapSettingsWidget*>() != nullptr) &&
+          all;
     all = step(QStringLiteral("sub_draw_area"), subHas(QStringLiteral("구역"))) && all;
     all = step(QStringLiteral("sub_draw_artifact"), subHas(QStringLiteral("유물"))) && all;
     // [F191] No attribute popups while drawing: the draw row must not offer a 속성 action.
@@ -650,14 +653,11 @@ static int writePhase1Qa(MainWindow* w, const QString& outPath) {
 
     const int seeded = w->seedDemoFieldData();
     QCoreApplication::processEvents();
-    all = step(QStringLiteral("demo_seed_features"), seeded >= 3,
-               QStringLiteral("seeded=%1").arg(seeded)) &&
-          all;
+    all = step(QStringLiteral("demo_seed_features"), seeded >= 3, QStringLiteral("seeded=%1").arg(seeded)) && all;
     w->runChecklistPublic();
     QCoreApplication::processEvents();
     const int errAfterSeed = w->lastChecklistErrorCount();
-    all = step(QStringLiteral("checklist_errors_drop_after_seed"),
-               errAfterSeed >= 0 && errAfterSeed < errBeforeSeed,
+    all = step(QStringLiteral("checklist_errors_drop_after_seed"), errAfterSeed >= 0 && errAfterSeed < errBeforeSeed,
                QStringLiteral("before=%1 after=%2").arg(errBeforeSeed).arg(errAfterSeed)) &&
           all;
   }
@@ -667,13 +667,19 @@ static int writePhase1Qa(MainWindow* w, const QString& outPath) {
   root.insert(QStringLiteral("steps"), steps);
   QDir().mkpath(QFileInfo(outPath).absolutePath());
   QFile f(outPath);
-  if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate))
-    return 4;
+  if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) return 4;
   f.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
   return all ? 0 : 5;
 }
 
 int KaApplication::run(int argc, char** argv) {
+#if defined(Q_OS_MAC)
+  // Ensure bundled macOS runtime paths and plugins are applied immediately
+  const KaPortablePaths macPaths = KaPortableRuntime::discover(kaExeDir());
+  if (macPaths.looksBundled()) {
+    KaPortableRuntime::applyEnvironment(macPaths);
+  }
+#endif
 #if KA_HGIS_HAS_QGIS
   KaSessionLog::setQgisVersion(Qgis::version());
 #endif
@@ -715,8 +721,7 @@ int KaApplication::run(int argc, char** argv) {
   // 같은 조사 GPKG를 두 프로세스가 잡아 잠금 충돌·중복 다운로드가 나는 것을 막는다.
   // 자동 QA(--smoke-quit/--qa-phase1/--stress-ui-loop)는 항상 자기 프로세스로 끝까지 돌아야 하므로 제외.
   if (!smokeQuit && !qaPhase1 && stressUiLoop <= 0 && kaActivateExistingInstance()) {
-    KaCrashGuard::logLine(
-        QStringLiteral("[boot] 이미 실행 중인 ka-hgis 창을 앞으로 올리고 종료합니다."));
+    KaCrashGuard::logLine(QStringLiteral("[boot] 이미 실행 중인 ka-hgis 창을 앞으로 올리고 종료합니다."));
     return 0;
   }
 #endif
@@ -728,8 +733,7 @@ int KaApplication::run(int argc, char** argv) {
   KaPortableRuntime::applyWebEngineFlags();
 
   // Keep 125/150/175% (4K) instead of snapping to 1x or 2x. Must precede QgsApplication.
-  QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
-      Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+  QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 
 #if KA_HGIS_HAS_QGIS
   QCoreApplication::setOrganizationName(QStringLiteral("ka-hgis"));
@@ -740,13 +744,14 @@ int KaApplication::run(int argc, char** argv) {
 #endif
   if (!sessionTempReady) {
     QApplication app(argc, argv);
-    KaUserError::critical(nullptr, {
-        QStringLiteral("앱을 시작할 수 없습니다"),
-        QStringLiteral("작업에 필요한 임시 폴더를 준비하지 못했습니다."),
-        QStringLiteral("디스크 공간이 부족하거나 임시 폴더에 쓸 수 없습니다."),
-        QStringLiteral("디스크의 남은 공간과 임시 폴더의 쓰기 권한을 확인한 뒤 다시 실행해 주세요. "
-                       "조사 파일은 변경하지 않았습니다."),
-    });
+    KaUserError::critical(
+        nullptr, {
+                     QStringLiteral("앱을 시작할 수 없습니다"),
+                     QStringLiteral("작업에 필요한 임시 폴더를 준비하지 못했습니다."),
+                     QStringLiteral("디스크 공간이 부족하거나 임시 폴더에 쓸 수 없습니다."),
+                     QStringLiteral("디스크의 남은 공간과 임시 폴더의 쓰기 권한을 확인한 뒤 다시 실행해 주세요. "
+                                    "조사 파일은 변경하지 않았습니다."),
+                 });
     return 2;
   }
 #if KA_HGIS_HAS_QGIS
@@ -767,7 +772,8 @@ int KaApplication::run(int argc, char** argv) {
 
   std::unique_ptr<KaStartupSplash> splash;
   if (!autoQa) {
-    splash = std::make_unique<KaStartupSplash>(nullptr, KaStartupSplash::ReadingDurationMs, KaTheme::displayOptions().paperLook);
+    splash = std::make_unique<KaStartupSplash>(nullptr, KaStartupSplash::ReadingDurationMs,
+                                               KaTheme::displayOptions().paperLook);
     splash->show();
     // Present the notice before the synchronous SDK initialization. Its 3 s reading
     // time counts from here; the main window opens once both are done.
@@ -798,15 +804,16 @@ int KaApplication::run(int argc, char** argv) {
       KaPortableRuntime::bindProjSearchPaths(bundled.projData);
       const bool crsOk = KaPortableRuntime::koreaWorkAndWebCrsValid();
       KaCrashGuard::logLine(QStringLiteral("[boot] PROJ %1 · 5186/5187/3857 %2")
-                                .arg(bundled.projData, crsOk ? QStringLiteral("ok")
-                                                             : QStringLiteral("fail")));
+                                .arg(bundled.projData, crsOk ? QStringLiteral("ok") : QStringLiteral("fail")));
       if (!crsOk && !autoQa) {
-        KaUserError::warn(nullptr, {
-            QStringLiteral("좌표계 자료를 읽지 못했습니다"),
-            QStringLiteral("작업 좌표계(5186/5187)와 위성·지적(3857)을 읽지 못했습니다."),
-            QStringLiteral("이 폴더의 proj.db가 없거나 깨져 있습니다. 실행 파일만 옮기면 지도가 나타나지 않습니다."),
-            QStringLiteral("폴더 전체를 복사한 뒤 ka-hgis.exe 또는 start.bat으로 다시 실행하세요."),
-        });
+        KaUserError::warn(
+            nullptr, {
+                         QStringLiteral("좌표계 자료를 읽지 못했습니다"),
+                         QStringLiteral("작업 좌표계(5186/5187)와 위성·지적(3857)을 읽지 못했습니다."),
+                         QStringLiteral(
+                             "이 폴더의 proj.db가 없거나 깨져 있습니다. 실행 파일만 옮기면 지도가 나타나지 않습니다."),
+                         QStringLiteral("폴더 전체를 복사한 뒤 ka-hgis.exe 또는 start.bat으로 다시 실행하세요."),
+                     });
       }
     }
   }
@@ -836,11 +843,9 @@ int KaApplication::run(int argc, char** argv) {
                    QStringLiteral("Mozilla/5.0 (Windows NT 10.0; Win64; x64) ka-hgis/0.3 QGIS"));
     // VWorld authenticates keys by Referer; no other provider is sent one (F059, same as BasemapOps).
     const QString referer = BasemapPolicy::refererForUrl(req->url().toString());
-    if (!referer.isEmpty())
-      req->setRawHeader("Referer", referer.toLatin1());
+    if (!referer.isEmpty()) req->setRawHeader("Referer", referer.toLatin1());
     const QUrl fixed = SoilMapService::rewriteArcGisCacheUrl(req->url());
-    if (fixed != req->url())
-      req->setUrl(fixed);
+    if (fixed != req->url()) req->setUrl(fixed);
   });
   qInfo() << "QGIS prefix:" << prefix;
   qInfo() << "Providers:" << QgsProviderRegistry::instance()->providerList();
@@ -849,7 +854,8 @@ int KaApplication::run(int argc, char** argv) {
   if (missingProviders.contains(QStringLiteral("wms")))
     qCritical("WMS/XYZ provider missing — basemap tiles will not load");
   if (!missingProviders.isEmpty()) {
-    KaCrashGuard::logLine(QStringLiteral("[boot] 지도 모듈 없음 — %1").arg(missingProviders.join(QStringLiteral(", "))));
+    KaCrashGuard::logLine(
+        QStringLiteral("[boot] 지도 모듈 없음 — %1").arg(missingProviders.join(QStringLiteral(", "))));
     // Drawing and saving may still work, so the app keeps running after the notice.
     if (!autoQa) {
       if (splash) splash->hide();
@@ -859,14 +865,11 @@ int KaApplication::run(int argc, char** argv) {
   }
   KaCrashGuard::logLine(QStringLiteral("[boot] QGIS 초기화 %1 ms").arg(bootTimer.elapsed()));
   // QGIS 내부 경고(WMS 실패, 좌표계 문제 등)도 세션 로그로 남긴다.
-  QObject::connect(
-      QgsApplication::messageLog(),
-      &QgsMessageLog::messageReceivedWithFormat,
-      &app, [](const QString& message, const QString& tag, Qgis::MessageLevel level,
-               Qgis::StringFormat) {
-        if (level == Qgis::MessageLevel::Warning || level == Qgis::MessageLevel::Critical)
-          KaCrashGuard::logLine(QStringLiteral("[qgis/%1] %2").arg(tag, message));
-      });
+  QObject::connect(QgsApplication::messageLog(), &QgsMessageLog::messageReceivedWithFormat, &app,
+                   [](const QString& message, const QString& tag, Qgis::MessageLevel level, Qgis::StringFormat) {
+                     if (level == Qgis::MessageLevel::Warning || level == Qgis::MessageLevel::Critical)
+                       KaCrashGuard::logLine(QStringLiteral("[qgis/%1] %2").arg(tag, message));
+                   });
   // 타일 요청이 순간 실패(VWorld 요청 제한·네트워크 흔들림)해도 프로바이더가 더
   // 재시도하도록 올린다(기본 3회). 위성지도가 반만 그려지는 주원인 완화.
   // 주의: 조직·앱 이름이 정해진 뒤에 써야 프로바이더가 읽는 저장소와 일치한다.
@@ -883,17 +886,15 @@ int KaApplication::run(int argc, char** argv) {
     // 화면을 끌 때 흰 화면이 났다가 뒤늦게 다음 지역이 튀어나오던 원인.
     // 크래시를 막는 것은 위의 parallel_rendering=false이지 스레드 굶기기가 아니다.
     QgsApplication::setMaxThreads(qBound(2, QThread::idealThreadCount() / 2, 4));
-    KaCrashGuard::logLine(
-        QStringLiteral("[boot] 타일 재시도 한도 = %1 · 렌더 스레드 = %2 · 병렬렌더 = 끔")
-            .arg(tileSettings.value(QStringLiteral("qgis/defaultTileMaxRetry"), 3).toInt())
-            .arg(QgsApplication::maxThreads()));
+    KaCrashGuard::logLine(QStringLiteral("[boot] 타일 재시도 한도 = %1 · 렌더 스레드 = %2 · 병렬렌더 = 끔")
+                              .arg(tileSettings.value(QStringLiteral("qgis/defaultTileMaxRetry"), 3).toInt())
+                              .arg(QgsApplication::maxThreads()));
   }
 #endif
 
   if (VworldSettings::loadApiKey().isEmpty()) {
     const QByteArray envKey = qgetenv("VWORLD_API_KEY");
-    if (!envKey.isEmpty())
-      VworldSettings::saveApiKey(QString::fromUtf8(envKey).trimmed());
+    if (!envKey.isEmpty()) VworldSettings::saveApiKey(QString::fromUtf8(envKey).trimmed());
   }
 
   int qaCode = 0;
@@ -902,18 +903,15 @@ int KaApplication::run(int argc, char** argv) {
   {
     MainWindow w;
     KaCrashGuard::logLine(QStringLiteral("[boot] 메인창 구성 %1 ms").arg(bootTimer.elapsed()));
-    if (!splash)
-      w.show();  // Preserve visible-window checks in the explicit QA fast path.
+    if (!splash) w.show();  // Preserve visible-window checks in the explicit QA fast path.
     if ((demoSurvey || stressUiLoop > 0) && openGpkg.isEmpty()) {
-      const QString dir = QDir::temp().filePath(
-          stressUiLoop > 0 ? QStringLiteral("ka-hgis-stress-ui")
-                           : QStringLiteral("ka-hgis-survey-verify"));
+      const QString dir = QDir::temp().filePath(stressUiLoop > 0 ? QStringLiteral("ka-hgis-stress-ui")
+                                                                 : QStringLiteral("ka-hgis-survey-verify"));
       QDir().mkpath(dir);
       QString err;
-      openGpkg = SurveyProjectFactory::createNewSurvey(dir, QStringLiteral("verify1"), &err,
-                                                       QStringLiteral("EPSG:5186"));
-      if (openGpkg.isEmpty())
-        qWarning() << "demo-survey create failed:" << err;
+      openGpkg =
+          SurveyProjectFactory::createNewSurvey(dir, QStringLiteral("verify1"), &err, QStringLiteral("EPSG:5186"));
+      if (openGpkg.isEmpty()) qWarning() << "demo-survey create failed:" << err;
     }
     if (!openGpkg.isEmpty()) {
       if (!w.openSurveyGpkg(openGpkg))
@@ -931,13 +929,12 @@ int KaApplication::run(int argc, char** argv) {
     if (qaPhase1) {
       // Phase1 QA는 지도 인프라까지 점검하므로 배경지도 로딩을 명시적으로 끝낸다.
       w.loadBootBasemaps();
-      const QString out = QDir(QCoreApplication::applicationDirPath())
-                              .filePath(QStringLiteral("../qa/phase1-e2e.json"));
+      const QString out =
+          QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("../qa/phase1-e2e.json"));
       const QString out2 = QStringLiteral("build/qa/phase1-e2e.json");
       QDir().mkpath(QStringLiteral("build/qa"));
       qaCode = writePhase1Qa(&w, out2);
-      if (qaCode != 0)
-        writePhase1Qa(&w, out);
+      if (qaCode != 0) writePhase1Qa(&w, out);
       QMetaObject::invokeMethod(&app, &QCoreApplication::quit, Qt::QueuedConnection);
     } else if (stressUiLoop > 0) {
       stressCode = w.runUiStressLoop(stressUiLoop);
@@ -951,8 +948,7 @@ int KaApplication::run(int argc, char** argv) {
       QObject::connect(splash.get(), &KaStartupSplash::readyToShow, &w, [&]() {
         w.show();
         splash->close();
-        KaCrashGuard::logLine(QStringLiteral("[boot] 시작 안내 후 창 표시 %1 ms")
-                                  .arg(bootTimer.elapsed()));
+        KaCrashGuard::logLine(QStringLiteral("[boot] 시작 안내 후 창 표시 %1 ms").arg(bootTimer.elapsed()));
       });
       splash->markReady();
     } else {
@@ -972,4 +968,3 @@ int KaApplication::run(int argc, char** argv) {
   if (stressUiLoop > 0) return stressCode != 0 ? stressCode : code;
   return code;
 }
-

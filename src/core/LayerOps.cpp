@@ -1,121 +1,120 @@
-#include "KaLogExcept.h"
-#include "KaSessionLog.h"
 #include "LayerOps.h"
-#include "LayerOpsInternal.h"
+#include "DemColorRampLegend.h"
+#include "DemPresentation.h"
+#include "FeaturePresets.h"
+#include "GeorefService.h"
+#include "HeritageStyle.h"
+#include "KaLogExcept.h"
+#include "KaPortableRuntime.h"
+#include "KaSessionLog.h"
 #include "LayerLabelControls.h"
+#include "LayerOpsInternal.h"
 #include "LayerRole.h"
 #include "LayerStyleDefaults.h"
 #include "LayerStyleKinds.h"
 #include "LayerTreeRecovery.h"
-#include "FeaturePresets.h"
-#include "HeritageStyle.h"
-#include "DemPresentation.h"
-#include "DemColorRampLegend.h"
-#include <QSignalBlocker>
-#include "GeorefService.h"
 #include "SoilMapService.h"
-#include "VworldSettings.h"
-#include "KaPortableRuntime.h"
 #include "SurveyBundle.h"
+#include "VworldSettings.h"
+#include <algorithm>
+#include <cmath>
+#include <functional>
+#include <limits>
+#include <memory>
+#include <QColor>
 #include <QDateTime>
+#include <QDir>
+#include <QDomDocument>
 #include <QEvent>
 #include <QFile>
 #include <QFileInfo>
-#include <QImage>
-#include <QTextStream>
-#include <QStringConverter>
-#include <QRegularExpression>
-#include <cmath>
-#include <memory>
-#include <limits>
-#include <algorithm>
-#include <QPainter>
-#include <QScreen>
-#include <QSize>
-#include <QUrl>
-#include <QWindow>
-#include <QColor>
 #include <QFont>
-#include <QDir>
-#include <QStandardPaths>
-#include <QDomDocument>
-#include <QUrlQuery>
-#include <QSet>
-#include <QTemporaryFile>
-#include <QPointer>
-#include <QScopedValueRollback>
-#include <QTimer>
 #include <QHash>
-#include <functional>
+#include <QImage>
+#include <QPainter>
+#include <QPointer>
+#include <QRegularExpression>
+#include <QScopedValueRollback>
+#include <QScreen>
+#include <QSet>
+#include <QSignalBlocker>
+#include <QSize>
+#include <QStandardPaths>
+#include <QStringConverter>
+#include <QTemporaryFile>
+#include <QTextStream>
+#include <QTimer>
+#include <QUrl>
+#include <QUrlQuery>
+#include <QWindow>
 
-#include <qgis.h>
-#include <QUndoStack>
-#include <qgsproject.h>
-#include <qgssnappingconfig.h>
-#include <qgsvectorlayer.h>
-#include <qgsrasterlayer.h>
-#include <qgsbrightnesscontrastfilter.h>
-#include <qgsmapcanvas.h>
-#include <qgssettings.h>
-#include <qgsvectorfilewriter.h>
-#include <qgscoordinatereferencesystem.h>
-#include <qgscoordinatetransformcontext.h>
-#include <qgscoordinatetransform.h>
-#include <qgsexception.h>
-#include <qgsfield.h>
-#include <qgsfields.h>
-#include <qgsfeature.h>
-#include <qgsfeaturerequest.h>
-#include <qgsfeatureiterator.h>
-#include <qgsgeometry.h>
-#include <qgspoint.h>
-#include <qgspointxy.h>
-#include <qgslinestring.h>
-#include <qgscategorizedsymbolrenderer.h>
-#include <qgssinglesymbolrenderer.h>
-#include <qgsinvertedpolygonrenderer.h>
-#include <qgssymbol.h>
-#include <qgssymbollayer.h>
-#include <qgsfillsymbol.h>
-#include <qgsfillsymbollayer.h>
-#include <qgslinesymbol.h>
-#include <qgslinesymbollayer.h>
-#include <qgsmarkersymbol.h>
-#include <qgsrenderer.h>
-#include <qgsrectangle.h>
-#include <qgslayertree.h>
-#include <qgslayertreelayer.h>
-#include <qgsbilinearrasterresampler.h>
-#include <qgsrasterresamplefilter.h>
-#include <qgsrasterdataprovider.h>
-#include <qgsvectordataprovider.h>
-#include <qgsrasterrenderer.h>
-#include <qgsrastertransparency.h>
-#include <qgssinglebandpseudocolorrenderer.h>
-#include <qgsrastershader.h>
-#include <qgscolorrampshader.h>
-#include <qgscolorramplegendnodesettings.h>
-#include <qgshillshaderenderer.h>
-#include <qgsrasterbandstats.h>
 #include <cpl_conv.h>
 #include <cpl_error.h>
 #include <gdal.h>
 #include <gdal_utils.h>
 #include <ogr_api.h>
-#include <qgsnetworkaccessmanager.h>
-#include <qgslayertreegroup.h>
-#include <qgsdataprovider.h>
-#include <qgsprojectviewsettings.h>
-#include <qgspallabeling.h>
-#include <qgsvectorlayerlabeling.h>
-#include <qgstextformat.h>
-#include <qgslabelobstaclesettings.h>
-#include <qgsreferencedgeometry.h>
 #include <QNetworkRequest>
+#include <QUndoStack>
+#include <qgis.h>
+#include <qgsbilinearrasterresampler.h>
+#include <qgsbrightnesscontrastfilter.h>
+#include <qgscategorizedsymbolrenderer.h>
+#include <qgscolorramplegendnodesettings.h>
+#include <qgscolorrampshader.h>
+#include <qgscoordinatereferencesystem.h>
+#include <qgscoordinatetransform.h>
+#include <qgscoordinatetransformcontext.h>
+#include <qgsdataprovider.h>
+#include <qgsexception.h>
+#include <qgsfeature.h>
+#include <qgsfeatureiterator.h>
+#include <qgsfeaturerequest.h>
+#include <qgsfield.h>
+#include <qgsfields.h>
+#include <qgsfillsymbol.h>
+#include <qgsfillsymbollayer.h>
+#include <qgsgeometry.h>
+#include <qgshillshaderenderer.h>
+#include <qgsinvertedpolygonrenderer.h>
+#include <qgslabelobstaclesettings.h>
+#include <qgslayertree.h>
+#include <qgslayertreegroup.h>
+#include <qgslayertreelayer.h>
+#include <qgslinestring.h>
+#include <qgslinesymbol.h>
+#include <qgslinesymbollayer.h>
+#include <qgsmapcanvas.h>
+#include <qgsmarkersymbol.h>
+#include <qgsnetworkaccessmanager.h>
+#include <qgspallabeling.h>
+#include <qgspoint.h>
+#include <qgspointxy.h>
+#include <qgsproject.h>
+#include <qgsprojectviewsettings.h>
+#include <qgsrasterbandstats.h>
+#include <qgsrasterdataprovider.h>
+#include <qgsrasterlayer.h>
+#include <qgsrasterrenderer.h>
+#include <qgsrasterresamplefilter.h>
+#include <qgsrastershader.h>
+#include <qgsrastertransparency.h>
+#include <qgsrectangle.h>
+#include <qgsreferencedgeometry.h>
+#include <qgsrenderer.h>
+#include <qgssettings.h>
+#include <qgssinglebandpseudocolorrenderer.h>
+#include <qgssinglesymbolrenderer.h>
+#include <qgssnappingconfig.h>
+#include <qgssymbol.h>
+#include <qgssymbollayer.h>
+#include <qgstextformat.h>
+#include <qgsvectordataprovider.h>
+#include <qgsvectorfilewriter.h>
+#include <qgsvectorlayer.h>
+#include <qgsvectorlayerlabeling.h>
 
-QString LayerOps::reprojectVectorLayer(QgsVectorLayer* layer, const QString& targetCrsAuthId,
-                                       const QString& outPath, QgsProject* project, QString* errorOut,
-                                       bool addToMap) {
+QString LayerOps::reprojectVectorLayer(QgsVectorLayer* layer, const QString& targetCrsAuthId, const QString& outPath,
+                                       QgsProject* project, QString* errorOut, bool addToMap) {
   if (!layer || !layer->isValid()) {
     if (errorOut) *errorOut = QStringLiteral("Invalid layer");
     return {};
@@ -126,11 +125,11 @@ QString LayerOps::reprojectVectorLayer(QgsVectorLayer* layer, const QString& tar
     return {};
   }
   QgsVectorFileWriter::SaveVectorOptions opts;
-  opts.driverName = outPath.endsWith(QLatin1String(".gpkg"), Qt::CaseInsensitive)
-                        ? QStringLiteral("GPKG")
-                        : QStringLiteral("ESRI Shapefile");
+  opts.driverName = outPath.endsWith(QLatin1String(".gpkg"), Qt::CaseInsensitive) ? QStringLiteral("GPKG")
+                                                                                  : QStringLiteral("ESRI Shapefile");
   opts.fileEncoding = QStringLiteral("UTF-8");
-  opts.ct = QgsCoordinateTransform(layer->crs(), dest, project ? project->transformContext() : QgsCoordinateTransformContext());
+  opts.ct = QgsCoordinateTransform(layer->crs(), dest,
+                                   project ? project->transformContext() : QgsCoordinateTransformContext());
   QString err, nf, nl;
   const auto we = QgsVectorFileWriter::writeAsVectorFormatV3(
       layer, outPath, project ? project->transformContext() : QgsCoordinateTransformContext(), opts, &err, &nf, &nl);
@@ -139,7 +138,8 @@ QString LayerOps::reprojectVectorLayer(QgsVectorLayer* layer, const QString& tar
     return {};
   }
   if (addToMap && project) {
-    auto* vl = new QgsVectorLayer(outPath, layer->name() + QStringLiteral("_") + targetCrsAuthId, QStringLiteral("ogr"));
+    auto* vl =
+        new QgsVectorLayer(outPath, layer->name() + QStringLiteral("_") + targetCrsAuthId, QStringLiteral("ogr"));
     if (vl->isValid()) {
       vl->setCrs(dest);
       project->addMapLayer(vl);
@@ -198,8 +198,8 @@ bool LayerOps::applyDomainDrawStyle(QgsVectorLayer* layer, const QString& layerK
   const bool noStroke = layer->customProperty(QStringLiteral("ka_hgis/style_no_stroke")).toBool();
   const bool dashed = layer->customProperty(QStringLiteral("ka_hgis/style_dashed")).toBool();
 
-  QgsSymbol* sym = LayerStyleDefaults::buildSymbol(static_cast<int>(gt), base, fill, stroke, strokeW,
-                                                   markerSize, noFill, noStroke, dashed);
+  QgsSymbol* sym = LayerStyleDefaults::buildSymbol(static_cast<int>(gt), base, fill, stroke, strokeW, markerSize,
+                                                   noFill, noStroke, dashed);
   if (!sym) {
     sym = std::unique_ptr<QgsSymbol>(QgsSymbol::defaultSymbol(gt)).release();  // QGIS 판마다 반환형이 달라 감싼다
     if (sym) sym->setColor(stroke);
@@ -242,44 +242,37 @@ QString LayerOps::detectNameField(const QgsVectorLayer* layer) {
 
   // 1. Cultural heritage & Archaeology (문화유적분포지도, 발굴/지표조사구역, 유적, 고고학)
   const QStringList heritageCandidates = {
-    QStringLiteral("사업명"), QStringLiteral("유적명"), QStringLiteral("유적명칭"),
-    QStringLiteral("조사명"), QStringLiteral("보고서명"), QStringLiteral("소재지"),
-    QStringLiteral("번호"), QStringLiteral("유적번호"), QStringLiteral("site_no"),
-    QStringLiteral("yujuk_nm"), QStringLiteral("yujeok_nm"), QStringLiteral("site_name"),
-    QStringLiteral("hist_nm"), QStringLiteral("rem_nm"), QStringLiteral("명칭"),
-    QStringLiteral("name"), QStringLiteral("title")
-  };
+      QStringLiteral("사업명"),   QStringLiteral("유적명"),   QStringLiteral("유적명칭"),  QStringLiteral("조사명"),
+      QStringLiteral("보고서명"), QStringLiteral("소재지"),   QStringLiteral("번호"),      QStringLiteral("유적번호"),
+      QStringLiteral("site_no"),  QStringLiteral("yujuk_nm"), QStringLiteral("yujeok_nm"), QStringLiteral("site_name"),
+      QStringLiteral("hist_nm"),  QStringLiteral("rem_nm"),   QStringLiteral("명칭"),      QStringLiteral("name"),
+      QStringLiteral("title")};
   for (const QString& c : heritageCandidates) {
     int idx = fds.lookupField(c);
     if (idx >= 0) return fds.at(idx).name();
   }
 
   // 2. Cadastral (연속지적도, 지적도, 토지)
-  const QStringList cadCandidates = {
-    QStringLiteral("jibun"), QStringLiteral("지번"), QStringLiteral("a2"),
-    QStringLiteral("a1"), QStringLiteral("pnu")
-  };
+  const QStringList cadCandidates = {QStringLiteral("jibun"), QStringLiteral("지번"), QStringLiteral("a2"),
+                                     QStringLiteral("a1"), QStringLiteral("pnu")};
   for (const QString& c : cadCandidates) {
     int idx = fds.lookupField(c);
     if (idx >= 0) return fds.at(idx).name();
   }
 
   // 3. Archaeology features (유구, 도면)
-  const QStringList featCandidates = {
-    QStringLiteral("feature_no"), QStringLiteral("유구번호"), QStringLiteral("유구명"),
-    QStringLiteral("호수"), QStringLiteral("kind_ko"), QStringLiteral("kind")
-  };
+  const QStringList featCandidates = {QStringLiteral("feature_no"), QStringLiteral("유구번호"),
+                                      QStringLiteral("유구명"),     QStringLiteral("호수"),
+                                      QStringLiteral("kind_ko"),    QStringLiteral("kind")};
   for (const QString& c : featCandidates) {
     int idx = fds.lookupField(c);
     if (idx >= 0) return fds.at(idx).name();
   }
 
   // 4. Digital topo / buildings / roads (수치지형도, 건물, 도로, 지명)
-  const QStringList topoCandidates = {
-    QStringLiteral("buld_nm"), QStringLiteral("건물명"), QStringLiteral("지명"),
-    QStringLiteral("road_nm"), QStringLiteral("도로명"), QStringLiteral("label"),
-    QStringLiteral("kor_nm")
-  };
+  const QStringList topoCandidates = {QStringLiteral("buld_nm"), QStringLiteral("건물명"), QStringLiteral("지명"),
+                                      QStringLiteral("road_nm"), QStringLiteral("도로명"), QStringLiteral("label"),
+                                      QStringLiteral("kor_nm")};
   for (const QString& c : topoCandidates) {
     int idx = fds.lookupField(c);
     if (idx >= 0) return fds.at(idx).name();
@@ -291,9 +284,9 @@ QString LayerOps::detectNameField(const QgsVectorLayer* layer) {
     const QString n = f.name().toLower();
     if (f.type() == QMetaType::QString || f.typeName().contains(QLatin1String("char"), Qt::CaseInsensitive) ||
         f.typeName().contains(QLatin1String("string"), Qt::CaseInsensitive)) {
-      if (n.contains(QStringLiteral("명")) || n.contains(QLatin1String("name")) ||
-          n.contains(QLatin1String("title")) || n.contains(QLatin1String("label")) ||
-          n.contains(QStringLiteral("지번")) || n.contains(QLatin1String("jibun"))) {
+      if (n.contains(QStringLiteral("명")) || n.contains(QLatin1String("name")) || n.contains(QLatin1String("title")) ||
+          n.contains(QLatin1String("label")) || n.contains(QStringLiteral("지번")) ||
+          n.contains(QLatin1String("jibun"))) {
         return f.name();
       }
     }
@@ -302,8 +295,7 @@ QString LayerOps::detectNameField(const QgsVectorLayer* layer) {
   // 6. First string field if available
   for (int i = 0; i < fds.count(); ++i) {
     const QgsField f = fds.at(i);
-    if (f.type() == QMetaType::QString)
-      return f.name();
+    if (f.type() == QMetaType::QString) return f.name();
   }
 
   return fds.at(0).name();
@@ -320,10 +312,10 @@ LayerOps::FeatureFormFields LayerOps::featureFormFields(const QgsVectorLayer* la
     }
     return -1;
   };
-  out.numberIndex = firstOf({QStringLiteral("feature_no"), QStringLiteral("artifact_no"),
-                             QStringLiteral("section_id"), QStringLiteral("point_id")});
-  out.nameIndex = firstOf({QStringLiteral("survey_name"), QStringLiteral("site_name"),
-                           QStringLiteral("name"), QStringLiteral("kind")});
+  out.numberIndex = firstOf({QStringLiteral("feature_no"), QStringLiteral("artifact_no"), QStringLiteral("section_id"),
+                             QStringLiteral("point_id")});
+  out.nameIndex = firstOf(
+      {QStringLiteral("survey_name"), QStringLiteral("site_name"), QStringLiteral("name"), QStringLiteral("kind")});
   if (out.nameIndex >= 0 && out.nameIndex == out.numberIndex) out.nameIndex = -1;
   if (out.nameIndex >= 0) out.nameField = fds.at(out.nameIndex).name();
   if (out.numberIndex >= 0) out.numberField = fds.at(out.numberIndex).name();
@@ -340,13 +332,11 @@ bool LayerOps::applyFeatureFormValues(QgsVectorLayer* layer, qint64 featureId, c
   if (isCadastralLayer(layer)) return fail(QStringLiteral("지적도는 고칠 수 없습니다."));
   if (isReferenceLayer(layer)) return fail(QStringLiteral("참조 지도는 고칠 수 없습니다."));
   const FeatureFormFields fields = featureFormFields(layer);
-  if (fields.nameIndex < 0 && fields.numberIndex < 0)
-    return fail(QStringLiteral("이름·번호 필드가 없습니다."));
+  if (fields.nameIndex < 0 && fields.numberIndex < 0) return fail(QStringLiteral("이름·번호 필드가 없습니다."));
   const QgsFeatureId fid = static_cast<QgsFeatureId>(featureId);
   QgsFeature existing = layer->getFeature(fid);
   if (!existing.isValid()) return fail(QStringLiteral("도형을 찾지 못했습니다."));
-  if (!layer->isEditable() && !layer->startEditing())
-    return fail(QStringLiteral("편집을 열 수 없습니다."));
+  if (!layer->isEditable() && !layer->startEditing()) return fail(QStringLiteral("편집을 열 수 없습니다."));
   if (fields.nameIndex >= 0 && !layer->changeAttributeValue(fid, fields.nameIndex, name))
     return fail(QStringLiteral("이름을 쓰지 못했습니다."));
   if (fields.numberIndex >= 0 && !layer->changeAttributeValue(fid, fields.numberIndex, number))
@@ -357,8 +347,7 @@ bool LayerOps::applyFeatureFormValues(QgsVectorLayer* layer, qint64 featureId, c
 
 QString LayerOps::prepareShapefileEncoding(const QString& shpPath) {
   QFileInfo fi(shpPath);
-  if (!fi.exists() || fi.suffix().compare(QLatin1String("shp"), Qt::CaseInsensitive) != 0)
-    return QString();
+  if (!fi.exists() || fi.suffix().compare(QLatin1String("shp"), Qt::CaseInsensitive) != 0) return QString();
 
   const QString dir = fi.absolutePath();
   const QString base = fi.completeBaseName();
@@ -390,7 +379,7 @@ QString LayerOps::prepareShapefileEncoding(const QString& shpPath) {
   }
 
   // 2. .cpg 파일이 없는 경우: .dbf 앞부분(16KB)을 검사하여 UTF-8 vs CP949 자동 판별
-  QString detected = QStringLiteral("CP949"); // 한국 공공데이터·지적도·유적도 SHP 기본값
+  QString detected = QStringLiteral("CP949");  // 한국 공공데이터·지적도·유적도 SHP 기본값
   if (QFile::exists(dbfPath)) {
     QFile dbfFile(dbfPath);
     if (dbfFile.open(QIODevice::ReadOnly)) {
@@ -407,7 +396,7 @@ QString LayerOps::prepareShapefileEncoding(const QString& shpPath) {
         const unsigned char c = bytes[i];
         if (c > 127) {
           hasNonAscii = true;
-          if ((c & 0xE0) == 0xC0 && c >= 0xC2) { // 2-byte UTF-8
+          if ((c & 0xE0) == 0xC0 && c >= 0xC2) {  // 2-byte UTF-8
             if (i + 1 < len && (bytes[i + 1] & 0xC0) == 0x80) {
               ++utf8MultiByteCount;
               ++i;
@@ -415,7 +404,7 @@ QString LayerOps::prepareShapefileEncoding(const QString& shpPath) {
               validUtf8 = false;
               break;
             }
-          } else if ((c & 0xF0) == 0xE0) { // 3-byte UTF-8 (한글 완성형은 EA..ED)
+          } else if ((c & 0xF0) == 0xE0) {  // 3-byte UTF-8 (한글 완성형은 EA..ED)
             if (i + 2 < len && (bytes[i + 1] & 0xC0) == 0x80 && (bytes[i + 2] & 0xC0) == 0x80) {
               ++utf8MultiByteCount;
               i += 2;
@@ -423,7 +412,7 @@ QString LayerOps::prepareShapefileEncoding(const QString& shpPath) {
               validUtf8 = false;
               break;
             }
-          } else if ((c & 0xF8) == 0xF0 && c <= 0xF4) { // 4-byte UTF-8
+          } else if ((c & 0xF8) == 0xF0 && c <= 0xF4) {  // 4-byte UTF-8
             if (i + 3 < len && (bytes[i + 1] & 0xC0) == 0x80 && (bytes[i + 2] & 0xC0) == 0x80 &&
                 (bytes[i + 3] & 0xC0) == 0x80) {
               ++utf8MultiByteCount;
@@ -484,8 +473,8 @@ bool LayerOps::setShapefileEncoding(QgsVectorLayer* layer, const QString& encodi
 }
 
 bool LayerOps::applySimpleVectorStyle(QgsVectorLayer* layer, const QColor& fillIn, const QColor& strokeIn,
-                                      double strokeWidthMm, double markerSizeMm, bool noFill,
-                                      bool noStroke, bool dashed) {
+                                      double strokeWidthMm, double markerSizeMm, bool noFill, bool noStroke,
+                                      bool dashed) {
   if (!layer || !layer->isValid()) return false;
   const LayerStyleDefaults::DomainStyle base = LayerStyleDefaults::forKey(layerKeyOf(layer));
   const LayerStyleDefaults::DomainStyle generic = LayerStyleDefaults::forKey(QString());
@@ -501,9 +490,8 @@ bool LayerOps::applySimpleVectorStyle(QgsVectorLayer* layer, const QColor& fillI
     strokeWidthMm = 0.4;
   }
   // A section line keeps its white casing: a colour edit changes the core line only.
-  QgsSymbol* sym = LayerStyleDefaults::buildSymbol(static_cast<int>(layer->geometryType()), base, fill,
-                                                   stroke, strokeWidthMm, markerSizeMm, noFill, noStroke,
-                                                   dashed);
+  QgsSymbol* sym = LayerStyleDefaults::buildSymbol(static_cast<int>(layer->geometryType()), base, fill, stroke,
+                                                   strokeWidthMm, markerSizeMm, noFill, noStroke, dashed);
   if (!sym) return false;
 
   layer->setCustomProperty(QStringLiteral("ka_hgis/style_fill"), fill.name(QColor::HexArgb));
@@ -520,9 +508,8 @@ bool LayerOps::applySimpleVectorStyle(QgsVectorLayer* layer, const QColor& fillI
   return true;
 }
 
-bool LayerOps::readSimpleVectorStyle(const QgsVectorLayer* layer, QColor* fill, QColor* stroke,
-                                     double* strokeWidthMm, double* markerSizeMm, bool* noFill,
-                                     bool* noStroke, bool* dashed) {
+bool LayerOps::readSimpleVectorStyle(const QgsVectorLayer* layer, QColor* fill, QColor* stroke, double* strokeWidthMm,
+                                     double* markerSizeMm, bool* noFill, bool* noStroke, bool* dashed) {
   if (!layer) return false;
 
   const LayerStyleDefaults::DomainStyle base = LayerStyleDefaults::forKey(layerKeyOf(layer));
@@ -562,12 +549,9 @@ bool LayerOps::readSimpleVectorStyle(const QgsVectorLayer* layer, QColor* fill, 
       if (const QgsSymbol* sym = single->symbol()) {
         // A cased line (section_line) lists the white casing first; the colour the
         // user sees and edits is the core line on top.
-        const QgsSymbolLayer* top = sym->symbolLayerCount() > 0
-                                        ? sym->symbolLayer(sym->symbolLayerCount() - 1)
-                                        : nullptr;
-        const QColor shown = layer->geometryType() == Qgis::GeometryType::Line && top
-                                 ? top->color()
-                                 : sym->color();
+        const QgsSymbolLayer* top =
+            sym->symbolLayerCount() > 0 ? sym->symbolLayer(sym->symbolLayerCount() - 1) : nullptr;
+        const QColor shown = layer->geometryType() == Qgis::GeometryType::Line && top ? top->color() : sym->color();
         if (shown.isValid()) {
           if (layer->geometryType() == Qgis::GeometryType::Line)
             s = shown;
@@ -611,8 +595,8 @@ bool LayerOps::explodeMultipartFeatures(QgsVectorLayer* layer, const QgsFeatureI
   }
 
   QgsFeature f;
-  QgsFeatureIterator it = !targetIds.isEmpty() ? layer->getFeatures(QgsFeatureRequest().setFilterFids(targetIds))
-                                              : layer->getFeatures();
+  QgsFeatureIterator it =
+      !targetIds.isEmpty() ? layer->getFeatures(QgsFeatureRequest().setFilterFids(targetIds)) : layer->getFeatures();
 
   int explodedPartsCount = 0;
   QgsFeatureIds toDelete;
@@ -640,7 +624,10 @@ bool LayerOps::explodeMultipartFeatures(QgsVectorLayer* layer, const QgsFeatureI
   }
 
   if (newFeatures.isEmpty() || toDelete.isEmpty()) {
-    if (errorOut) *errorOut = QStringLiteral("선택한 폴리곤 중 묶여 있는 그룹(멀티폴리곤)이 없습니다.\n단일 폴리곤을 나누려면 분할선을 그어 자르거나 겹친 두 도형을 선택하세요.");
+    if (errorOut)
+      *errorOut = QStringLiteral(
+          "선택한 폴리곤 중 묶여 있는 그룹(멀티폴리곤)이 없습니다.\n단일 폴리곤을 나누려면 분할선을 그어 자르거나 겹친 "
+          "두 도형을 선택하세요.");
     return false;
   }
 
@@ -672,10 +659,8 @@ bool LayerOps::explodeMultipartFeatures(QgsVectorLayer* layer, const QgsFeatureI
   return true;
 }
 
-QgsVectorLayer* LayerOps::clipLayerByBoundary(QgsVectorLayer* sourceLayer,
-                                             QgsVectorLayer* boundaryLayer,
-                                             QgsProject* project,
-                                             QString* errorOut) {
+QgsVectorLayer* LayerOps::clipLayerByBoundary(QgsVectorLayer* sourceLayer, QgsVectorLayer* boundaryLayer,
+                                              QgsProject* project, QString* errorOut) {
   if (!sourceLayer || !sourceLayer->isValid()) {
     if (errorOut) *errorOut = QStringLiteral("자를 대상 레이어가 올바르지 않습니다.");
     return nullptr;
@@ -691,12 +676,11 @@ QgsVectorLayer* LayerOps::clipLayerByBoundary(QgsVectorLayer* sourceLayer,
 
   // 1. 바운더리 레이어의 지오메트리를 대상 레이어 CRS로 변환 후 Union
   QgsCoordinateTransform xf;
-  const bool needXf = boundaryLayer->crs().isValid() && sourceLayer->crs().isValid() &&
-                     boundaryLayer->crs() != sourceLayer->crs();
+  const bool needXf =
+      boundaryLayer->crs().isValid() && sourceLayer->crs().isValid() && boundaryLayer->crs() != sourceLayer->crs();
   if (needXf) {
     xf = QgsCoordinateTransform(boundaryLayer->crs(), sourceLayer->crs(),
-                                project ? project->transformContext()
-                                        : QgsCoordinateTransformContext());
+                                project ? project->transformContext() : QgsCoordinateTransformContext());
     xf.setBallparkTransformsAreAppropriate(true);
   }
 
@@ -714,10 +698,8 @@ QgsVectorLayer* LayerOps::clipLayerByBoundary(QgsVectorLayer* sourceLayer,
         continue;
       }
     }
-    if (!bg.isGeosValid())
-      bg = bg.makeValid();
-    if (!bg.isEmpty())
-      bGeoms.append(bg);
+    if (!bg.isGeosValid()) bg = bg.makeValid();
+    if (!bg.isEmpty()) bGeoms.append(bg);
   }
 
   if (bGeoms.isEmpty()) {
@@ -758,16 +740,14 @@ QgsVectorLayer* LayerOps::clipLayerByBoundary(QgsVectorLayer* sourceLayer,
   while (sit.nextFeature(sf)) {
     if (!sf.hasGeometry() || sf.geometry().isEmpty()) continue;
     QgsGeometry sg = sf.geometry();
-    if (!sg.isGeosValid())
-      sg = sg.makeValid();
+    if (!sg.isGeosValid()) sg = sg.makeValid();
     if (sg.isEmpty()) continue;
 
     if (!sg.intersects(boundaryUnion)) continue;
 
     QgsGeometry clippedGeom = sg.intersection(boundaryUnion);
     if (clippedGeom.isEmpty()) continue;
-    if (!clippedGeom.isGeosValid())
-      clippedGeom = clippedGeom.makeValid();
+    if (!clippedGeom.isGeosValid()) clippedGeom = clippedGeom.makeValid();
     if (clippedGeom.isEmpty()) continue;
 
     QgsFeature newFeat(clippedLayer->fields());
@@ -796,9 +776,7 @@ QgsVectorLayer* LayerOps::clipLayerByBoundary(QgsVectorLayer* sourceLayer,
   return clippedLayer;
 }
 
-bool LayerOps::splitPolygonWithLine(QgsVectorLayer* layer,
-                                   const QVector<QgsPointXY>& splitLine,
-                                   QString* errorOut) {
+bool LayerOps::splitPolygonWithLine(QgsVectorLayer* layer, const QVector<QgsPointXY>& splitLine, QString* errorOut) {
   if (!layer || !layer->isValid()) {
     if (errorOut) *errorOut = QStringLiteral("올바른 레이어가 아닙니다.");
     return false;
@@ -841,7 +819,8 @@ bool LayerOps::splitPolygonWithLine(QgsVectorLayer* layer,
     QVector<QgsGeometry> newGeometries;
     QgsPointSequence topologyTestPoints;
     QgsLineString splitCurve(splitLine);
-    Qgis::GeometryOperationResult res = g.splitGeometry(&splitCurve, newGeometries, false, false, topologyTestPoints, true);
+    Qgis::GeometryOperationResult res =
+        g.splitGeometry(&splitCurve, newGeometries, false, false, topologyTestPoints, true);
     if (res == Qgis::GeometryOperationResult::Success && !newGeometries.isEmpty()) {
       layer->changeGeometry(f.id(), g);
 
@@ -858,7 +837,8 @@ bool LayerOps::splitPolygonWithLine(QgsVectorLayer* layer,
 
   if (splitCount == 0) {
     if (startedHere) layer->rollBack();
-    if (errorOut) *errorOut = QStringLiteral("분할선이 관통하는 폴리곤이 없습니다. 폴리곤 양쪽 경계를 완전히 가로질러야 합니다.");
+    if (errorOut)
+      *errorOut = QStringLiteral("분할선이 관통하는 폴리곤이 없습니다. 폴리곤 양쪽 경계를 완전히 가로질러야 합니다.");
     return false;
   }
 
@@ -872,11 +852,8 @@ bool LayerOps::splitPolygonWithLine(QgsVectorLayer* layer,
   return true;
 }
 
-bool LayerOps::splitTwoOverlappingFeatures(QgsVectorLayer* layer1, qint64 fid1,
-                                          QgsVectorLayer* layer2, qint64 fid2,
-                                          qint64* outCreatedFid,
-                                          QgsVectorLayer** outTargetLayer,
-                                          QString* errorOut) {
+bool LayerOps::splitTwoOverlappingFeatures(QgsVectorLayer* layer1, qint64 fid1, QgsVectorLayer* layer2, qint64 fid2,
+                                           qint64* outCreatedFid, QgsVectorLayer** outTargetLayer, QString* errorOut) {
   if (outCreatedFid) *outCreatedFid = -1;
   if (outTargetLayer) *outTargetLayer = nullptr;
 
@@ -899,9 +876,9 @@ bool LayerOps::splitTwoOverlappingFeatures(QgsVectorLayer* layer1, qint64 fid1,
   QgsGeometry g2 = f2.geometry();
 
   if (layer1->crs().isValid() && layer2->crs().isValid() && layer1->crs() != layer2->crs()) {
-    QgsCoordinateTransform xf(layer2->crs(), layer1->crs(),
-                              QgsProject::instance() ? QgsProject::instance()->transformContext()
-                                                     : QgsCoordinateTransformContext());
+    QgsCoordinateTransform xf(
+        layer2->crs(), layer1->crs(),
+        QgsProject::instance() ? QgsProject::instance()->transformContext() : QgsCoordinateTransformContext());
     xf.setBallparkTransformsAreAppropriate(true);
     try {
       if (g2.transform(xf) != Qgis::GeometryOperationResult::Success) {
@@ -937,10 +914,11 @@ bool LayerOps::splitTwoOverlappingFeatures(QgsVectorLayer* layer1, qint64 fid1,
   if (!diff2.isEmpty() && !diff2.isGeosValid()) diff2 = diff2.makeValid();
 
   const bool crossLayer = (layer1 != layer2);
-  if (crossLayer && layer1->crs().isValid() && layer2->crs().isValid() && layer1->crs() != layer2->crs() && !diff2.isEmpty()) {
-    QgsCoordinateTransform invXf(layer1->crs(), layer2->crs(),
-                                 QgsProject::instance() ? QgsProject::instance()->transformContext()
-                                                        : QgsCoordinateTransformContext());
+  if (crossLayer && layer1->crs().isValid() && layer2->crs().isValid() && layer1->crs() != layer2->crs() &&
+      !diff2.isEmpty()) {
+    QgsCoordinateTransform invXf(
+        layer1->crs(), layer2->crs(),
+        QgsProject::instance() ? QgsProject::instance()->transformContext() : QgsCoordinateTransformContext());
     invXf.setBallparkTransformsAreAppropriate(true);
     try {
       diff2.transform(invXf);
@@ -1006,8 +984,7 @@ bool LayerOps::splitTwoOverlappingFeatures(QgsVectorLayer* layer1, qint64 fid1,
       break;
     }
   }
-  if (addedId < 0 && newF.id() >= 0)
-    addedId = static_cast<qint64>(newF.id());
+  if (addedId < 0 && newF.id() >= 0) addedId = static_cast<qint64>(newF.id());
 
   if (outCreatedFid) *outCreatedFid = addedId;
   if (outTargetLayer) *outTargetLayer = targetLayer;
@@ -1072,16 +1049,14 @@ void LayerOps::placeCadastralLayer(QgsProject* project, QgsMapLayer* layer) {
       ++moved;
       bundled->removeChildNode(child);
     }
-    if (auto* parent = qobject_cast<QgsLayerTreeGroup*>(bundled->parent()))
-      parent->removeChildNode(bundled);
+    if (auto* parent = qobject_cast<QgsLayerTreeGroup*>(bundled->parent())) parent->removeChildNode(bundled);
   }
   if (isVworldCadastralPicture(layer)) {
     if (QgsLayerTreeLayer* node = root->findLayer(layer->id())) {
       if (node->parent() == root) return;
       auto* clone = node->clone();
       root->insertChildNode(0, clone);
-      if (auto* parent = qobject_cast<QgsLayerTreeGroup*>(node->parent()))
-        parent->removeChildNode(node);
+      if (auto* parent = qobject_cast<QgsLayerTreeGroup*>(node->parent())) parent->removeChildNode(node);
       return;
     }
     root->insertLayer(0, layer);
@@ -1092,8 +1067,7 @@ void LayerOps::placeCadastralLayer(QgsProject* project, QgsMapLayer* layer) {
     if (node->parent() == root) return;
     auto* clone = node->clone();
     root->insertChildNode(0, clone);
-    if (auto* parent = qobject_cast<QgsLayerTreeGroup*>(node->parent()))
-      parent->removeChildNode(node);
+    if (auto* parent = qobject_cast<QgsLayerTreeGroup*>(node->parent())) parent->removeChildNode(node);
     return;
   }
   root->insertLayer(0, layer);
@@ -1115,13 +1089,13 @@ void LayerOps::restoreThematicOverlayVisibility(QgsProject* project) {
     // Upgrade only the exact scale limit formerly assigned by this app. Preserve
     // user scale rules on imported layers, including similarly named datasets.
     const bool legacyLimit = layer->hasScaleBasedVisibility() &&
-        layer->minimumScale() == kThematicMinScaleDenom + 1.0 && layer->maximumScale() == 0.0;
+                             layer->minimumScale() == kThematicMinScaleDenom + 1.0 && layer->maximumScale() == 0.0;
     const QString source = layer->source();
     static const QRegularExpression thematicTable(
         QStringLiteral("\\|layername=(soil_map|geology_map|river_map|paleo_landform)(?:\\||$)"));
     const bool knownSource = source.contains(thematicTable) ||
-        source.contains(QLatin1String("data.kigam.re.kr/geoserver")) ||
-        source.contains(QLatin1String("soil.rda.go.kr"));
+                             source.contains(QLatin1String("data.kigam.re.kr/geoserver")) ||
+                             source.contains(QLatin1String("soil.rda.go.kr"));
     if (legacyLimit && (tagged || (knownSource && isReferenceOrBasemapLayer(layer))))
       applyThematicOverlayScaleRange(layer);
   }
@@ -1170,8 +1144,7 @@ QString LayerOps::layerKeyOf(const QgsMapLayer* layer) {
 void LayerOps::applyLegendCrsLabel(QgsMapLayer* layer) {
   if (!layer) return;
   const QString shown = kaFriendlyLegendName(layer->name());
-  if (!shown.isEmpty() && layer->name() != shown)
-    layer->setName(shown);
+  if (!shown.isEmpty() && layer->name() != shown) layer->setName(shown);
   const QString auth = layer->crs().isValid() ? layer->crs().authid() : QString();
   if (!auth.isEmpty()) {
     layer->setAbstract(QStringLiteral("좌표계 %1").arg(auth));
@@ -1189,8 +1162,7 @@ bool LayerOps::isCadastralLayer(const QgsMapLayer* layer) {
 bool LayerOps::isVworldCadastralPicture(const QgsMapLayer* layer) {
   if (!layer) return false;
   const QString n = layer->name();
-  if (n.contains(QStringLiteral("VWorld")) && n.contains(QStringLiteral("지적")))
-    return true;
+  if (n.contains(QStringLiteral("VWorld")) && n.contains(QStringLiteral("지적"))) return true;
   if (n == QLatin1String("지적") || n.startsWith(QLatin1String("지적 본번")) ||
       n.startsWith(QLatin1String("지적 부번")) || n.startsWith(QLatin1String("지적(")))
     return true;
@@ -1201,15 +1173,13 @@ bool LayerOps::projectHasCadastralLayer(const QgsProject* project) {
   if (!project) return false;
   for (QgsMapLayer* layer : project->mapLayers()) {
     if (!layer || !layer->isValid()) continue;
-    if (isCadastralLayer(layer) || isVworldCadastralPicture(layer))
-      return true;
+    if (isCadastralLayer(layer) || isVworldCadastralPicture(layer)) return true;
   }
   return false;
 }
 
 bool LayerOps::userRemovedCadastral(const QgsProject* project) {
-  return project && project->readBoolEntry(QStringLiteral("ka_hgis"),
-                                           QString::fromUtf8(kPropSkipAutoCadastral), false);
+  return project && project->readBoolEntry(QStringLiteral("ka_hgis"), QString::fromUtf8(kPropSkipAutoCadastral), false);
 }
 
 void LayerOps::rememberUserRemovedCadastral(QgsProject* project) {
@@ -1227,11 +1197,9 @@ QList<QgsMapLayer*> LayerOps::removableCadastralLayersFromNode(QgsLayerTreeNode*
   if (!node) return out;
   auto push = [&](QgsMapLayer* layer) {
     if (!layer || !layerKeyOf(layer).isEmpty() || out.contains(layer)) return;
-    if (isCadastralLayer(layer) || isVworldCadastralPicture(layer))
-      out.append(layer);
+    if (isCadastralLayer(layer) || isVworldCadastralPicture(layer)) out.append(layer);
   };
-  if (auto* leaf = qobject_cast<QgsLayerTreeLayer*>(node))
-    push(leaf->layer());
+  if (auto* leaf = qobject_cast<QgsLayerTreeLayer*>(node)) push(leaf->layer());
   return out;
 }
 
@@ -1243,8 +1211,7 @@ QList<QgsMapLayer*> LayerOps::removableReferenceLayersFromNode(QgsLayerTreeNode*
     if (isCadastralLayer(layer) || isVworldCadastralPicture(layer)) return;
     out.append(layer);
   };
-  if (auto* leaf = qobject_cast<QgsLayerTreeLayer*>(node))
-    push(leaf->layer());
+  if (auto* leaf = qobject_cast<QgsLayerTreeLayer*>(node)) push(leaf->layer());
   return out;
 }
 
@@ -1254,15 +1221,13 @@ QList<QgsMapLayer*> LayerOps::removableLegendLayersFromNode(QgsLayerTreeNode* no
     QList<QgsMapLayer*> out;
     for (QgsLayerTreeLayer* child : group->findLayers()) {
       QgsMapLayer* layer = child ? child->layer() : nullptr;
-      if (layer && !out.contains(layer))
-        out.append(layer);
+      if (layer && !out.contains(layer)) out.append(layer);
     }
     return out;
   }
   QList<QgsMapLayer*> out = removableCadastralLayersFromNode(node);
   for (QgsMapLayer* layer : removableReferenceLayersFromNode(node)) {
-    if (layer && !out.contains(layer))
-      out.append(layer);
+    if (layer && !out.contains(layer)) out.append(layer);
   }
   return out;
 }
@@ -1277,7 +1242,9 @@ bool LayerOps::isReferenceLayer(const QgsMapLayer* layer) {
 bool LayerOps::isSnapSourceLayer(const QgsVectorLayer* layer) {
   if (!layer || !layer->isValid()) return false;
   if (isCadastralLayer(layer)) return true;
-  return layer->customProperty(QStringLiteral("ka_hgis/cad_drawing")).isValid() ? layer->geometryType() != Qgis::GeometryType::Point : !isReferenceLayer(layer);  // a drawing brought in to trace: its lines, not its text points
+  return layer->customProperty(QStringLiteral("ka_hgis/cad_drawing")).isValid()
+             ? layer->geometryType() != Qgis::GeometryType::Point
+             : !isReferenceLayer(layer);  // a drawing brought in to trace: its lines, not its text points
 }
 
 bool LayerOps::isBasemapLayer(const QgsMapLayer* layer) {
@@ -1313,8 +1280,7 @@ QgsVectorLayer* LayerOps::findByLayerKey(QgsProject* project, const QString& lay
     if (layerKeyOf(v) == layerKey) return v;
   }
   const auto byName = project->mapLayersByName(layerKey);
-  if (!byName.isEmpty())
-    return qobject_cast<QgsVectorLayer*>(byName.first());
+  if (!byName.isEmpty()) return qobject_cast<QgsVectorLayer*>(byName.first());
   return nullptr;
 }
 
@@ -1362,10 +1328,8 @@ QList<QgsVectorLayer*> LayerOps::domainLayersForKey(QgsProject* project, const Q
   // 표시 이름을 도메인 이름으로 바꾼 참조 자료는 도메인 자료가 아니다.
   found.removeIf([](QgsVectorLayer* v) {
     return !v || !v->isValid() ||
-           v->customProperty(QString::fromUtf8(kPropLayerRole)).toString() ==
-               QLatin1String(kRoleReference) ||
-           v->customProperty(QString::fromUtf8(kPropLayerRole)).toString() ==
-               QLatin1String(kRoleCadastral) ||
+           v->customProperty(QString::fromUtf8(kPropLayerRole)).toString() == QLatin1String(kRoleReference) ||
+           v->customProperty(QString::fromUtf8(kPropLayerRole)).toString() == QLatin1String(kRoleCadastral) ||
            isCadastralLayer(v);
   });
   return found;
@@ -1373,17 +1337,15 @@ QList<QgsVectorLayer*> LayerOps::domainLayersForKey(QgsProject* project, const Q
 
 QgsVectorLayer* LayerOps::digitizeTargetLayer(QgsProject* project, QgsVectorLayer* current,
                                               const QString& requiredKey) {
-  if (requiredKey.isEmpty())
-    return nullptr;
-  if (current && current->isValid() && layerKeyOf(current) == requiredKey)
-    return current;
+  if (requiredKey.isEmpty()) return nullptr;
+  if (current && current->isValid() && layerKeyOf(current) == requiredKey) return current;
   return findByLayerKey(project, requiredKey);
 }
 
 QStringList LayerOps::domainLayerKeys() {
-  return {QStringLiteral("survey_area"), QStringLiteral("feature_poly"), QStringLiteral("feature_line"),
-          QStringLiteral("section_line"), QStringLiteral("control_points"),
-          QStringLiteral("artifact_point"), QStringLiteral("trial_trench")};
+  return {QStringLiteral("survey_area"),  QStringLiteral("feature_poly"),   QStringLiteral("feature_line"),
+          QStringLiteral("section_line"), QStringLiteral("control_points"), QStringLiteral("artifact_point"),
+          QStringLiteral("trial_trench")};
 }
 
 void LayerOps::removeSurveyDomainLayers(QgsProject* project) {
@@ -1395,16 +1357,13 @@ void LayerOps::removeSurveyDomainLayers(QgsProject* project) {
     if (isBasemapLayer(l)) continue;
     const QString key = layerKeyOf(l);
     // 도면 레이어(survey_area, feature_poly 등)만 제거하고, 외부에서 불러온 SHP/DXF 등 사용자 레이어는 온전히 유지한다.
-    if (!domainKeys.contains(key))
-      continue;
+    if (!domainKeys.contains(key)) continue;
     if (auto* v = qobject_cast<QgsVectorLayer*>(l)) {
-      if (v->isEditable())
-        v->rollBack();
+      if (v->isEditable()) v->rollBack();
     }
     ids.append(l->id());
   }
-  if (!ids.isEmpty())
-    project->removeMapLayers(ids);
+  if (!ids.isEmpty()) project->removeMapLayers(ids);
   pruneEmptyLegendGroups(project);
 }
 
@@ -1416,8 +1375,7 @@ void LayerOps::pruneEmptyLegendGroups(QgsProject* project) {
   for (QgsLayerTreeNode* n : children) {
     auto* g = qobject_cast<QgsLayerTreeGroup*>(n);
     if (!g) continue;
-    if (g->children().isEmpty())
-      root->removeChildNode(g);
+    if (g->children().isEmpty()) root->removeChildNode(g);
   }
 }
 
@@ -1429,11 +1387,9 @@ QList<QgsVectorLayer*> LayerOps::surveyAreaLayers(QgsProject* project) {
     if (!vl || !vl->isValid()) continue;
     const QString key = layerKeyOf(vl);
     const QString name = vl->name();
-    const bool isSa = (key == QLatin1String("survey_area")) ||
-                      key.startsWith(QLatin1String("survey_area_")) ||
+    const bool isSa = (key == QLatin1String("survey_area")) || key.startsWith(QLatin1String("survey_area_")) ||
                       vl->customProperty(QStringLiteral("ka_hgis/is_survey_area")).toBool() ||
-                      name == QLatin1String("survey_area") ||
-                      name == QStringLiteral("조사구역") ||
+                      name == QLatin1String("survey_area") || name == QStringLiteral("조사구역") ||
                       vl->source().contains(QLatin1String("layername=survey_area"));
     if (isSa && !res.contains(vl)) {
       res.append(vl);
@@ -1442,9 +1398,8 @@ QList<QgsVectorLayer*> LayerOps::surveyAreaLayers(QgsProject* project) {
   return res;
 }
 
-QgsVectorLayer* LayerOps::createSurveyAreaLayer(QgsProject* project, const QString& gpkgPath,
-                                                const QString& titleKo, const QColor& stroke,
-                                                const QColor& fill, double widthMm,
+QgsVectorLayer* LayerOps::createSurveyAreaLayer(QgsProject* project, const QString& gpkgPath, const QString& titleKo,
+                                                const QColor& stroke, const QColor& fill, double widthMm,
                                                 QString* errorOut) {
   if (!project) {
     if (errorOut) *errorOut = QStringLiteral("프로젝트가 없습니다.");
@@ -1468,8 +1423,8 @@ QgsVectorLayer* LayerOps::createSurveyAreaLayer(QgsProject* project, const QStri
   QString tableName = QStringLiteral("survey_area");
   bool canReuseDefault = false;
   if (!usedTables.contains(tableName)) {
-    auto* testVl = new QgsVectorLayer(QStringLiteral("%1|layername=survey_area").arg(gpkgPath),
-                                      titleKo, QStringLiteral("ogr"));
+    auto* testVl =
+        new QgsVectorLayer(QStringLiteral("%1|layername=survey_area").arg(gpkgPath), titleKo, QStringLiteral("ogr"));
     if (testVl && testVl->isValid() && testVl->featureCount() == 0) {
       canReuseDefault = true;
       delete testVl;
@@ -1480,8 +1435,7 @@ QgsVectorLayer* LayerOps::createSurveyAreaLayer(QgsProject* project, const QStri
 
   QgsVectorLayer* vl = nullptr;
   if (canReuseDefault) {
-    vl = new QgsVectorLayer(QStringLiteral("%1|layername=survey_area").arg(gpkgPath),
-                            titleKo, QStringLiteral("ogr"));
+    vl = new QgsVectorLayer(QStringLiteral("%1|layername=survey_area").arg(gpkgPath), titleKo, QStringLiteral("ogr"));
   } else {
     int counter = 2;
     tableName = QStringLiteral("survey_area_%1").arg(counter);
@@ -1490,9 +1444,8 @@ QgsVectorLayer* LayerOps::createSurveyAreaLayer(QgsProject* project, const QStri
       tableName = QStringLiteral("survey_area_%1").arg(counter);
     }
 
-    const QgsCoordinateReferenceSystem crs = project->crs().isValid()
-        ? project->crs()
-        : QgsCoordinateReferenceSystem(QStringLiteral("EPSG:5186"));
+    const QgsCoordinateReferenceSystem crs =
+        project->crs().isValid() ? project->crs() : QgsCoordinateReferenceSystem(QStringLiteral("EPSG:5186"));
     const QString memUri = QStringLiteral("Polygon?crs=%1").arg(crs.authid());
     QgsVectorLayer mem(memUri, titleKo, QStringLiteral("memory"));
     if (!mem.isValid()) {
@@ -1514,14 +1467,12 @@ QgsVectorLayer* LayerOps::createSurveyAreaLayer(QgsProject* project, const QStri
     opts.fileEncoding = QStringLiteral("UTF-8");
     opts.actionOnExistingFile = QgsVectorFileWriter::CreateOrOverwriteLayer;
     QString errMsg, newFn, newLayer;
-    if (QgsVectorFileWriter::writeAsVectorFormatV3(
-            &mem, gpkgPath, project->transformContext(), opts, &errMsg, &newFn, &newLayer) !=
-        QgsVectorFileWriter::NoError) {
+    if (QgsVectorFileWriter::writeAsVectorFormatV3(&mem, gpkgPath, project->transformContext(), opts, &errMsg, &newFn,
+                                                   &newLayer) != QgsVectorFileWriter::NoError) {
       if (errorOut) *errorOut = errMsg;
       return nullptr;
     }
-    vl = new QgsVectorLayer(QStringLiteral("%1|layername=%2").arg(gpkgPath, tableName),
-                            titleKo, QStringLiteral("ogr"));
+    vl = new QgsVectorLayer(QStringLiteral("%1|layername=%2").arg(gpkgPath, tableName), titleKo, QStringLiteral("ogr"));
   }
 
   if (!vl || !vl->isValid()) {
@@ -1550,33 +1501,29 @@ QgsVectorLayer* LayerOps::createSurveyAreaLayer(QgsProject* project, const QStri
 }
 
 namespace {
-QgsVectorLayer* kaFindExistingSavedLayer(QgsProject* project, const QString& gpkgPath,
-                                         const QString& table);
+QgsVectorLayer* kaFindExistingSavedLayer(QgsProject* project, const QString& gpkgPath, const QString& table);
 }
 
-QgsVectorLayer* LayerOps::ensureDomainLayer(QgsProject* project, const QString& gpkgPath,
-                                            const QString& layerKey, const QString& titleKo,
-                                            QString* errorOut) {
+QgsVectorLayer* LayerOps::ensureDomainLayer(QgsProject* project, const QString& gpkgPath, const QString& layerKey,
+                                            const QString& titleKo, QString* errorOut) {
   if (!project) {
     if (errorOut) *errorOut = QStringLiteral("No project");
     return nullptr;
   }
-  if (auto* existing = kaFindExistingSavedLayer(project, gpkgPath, layerKey))
-    return existing;
+  if (auto* existing = kaFindExistingSavedLayer(project, gpkgPath, layerKey)) return existing;
   if (gpkgPath.isEmpty()) {
     if (errorOut) *errorOut = QStringLiteral("먼저 「새 조사」로 저장 경로를 만드세요.");
     return nullptr;
   }
-  auto* vl = new QgsVectorLayer(QStringLiteral("%1|layername=%2").arg(gpkgPath, layerKey),
-                                titleKo, QStringLiteral("ogr"));
-  const bool canCreateMissing = layerKey == QLatin1String("artifact_point")
-                                || layerKey == QLatin1String("trial_trench");
+  auto* vl =
+      new QgsVectorLayer(QStringLiteral("%1|layername=%2").arg(gpkgPath, layerKey), titleKo, QStringLiteral("ogr"));
+  const bool canCreateMissing =
+      layerKey == QLatin1String("artifact_point") || layerKey == QLatin1String("trial_trench");
   if (!vl->isValid() && canCreateMissing) {
     delete vl;
     vl = nullptr;
-    const QgsCoordinateReferenceSystem crs = project->crs().isValid()
-        ? project->crs()
-        : QgsCoordinateReferenceSystem(QStringLiteral("EPSG:5186"));
+    const QgsCoordinateReferenceSystem crs =
+        project->crs().isValid() ? project->crs() : QgsCoordinateReferenceSystem(QStringLiteral("EPSG:5186"));
     const QString memUri = (layerKey == QLatin1String("trial_trench"))
                                ? QStringLiteral("Polygon?crs=%1").arg(crs.authid())
                                : QStringLiteral("Point?crs=%1").arg(crs.authid());
@@ -1588,10 +1535,10 @@ QgsVectorLayer* LayerOps::ensureDomainLayer(QgsProject* project, const QString& 
         fields.append(QgsField(QStringLiteral("width"), QMetaType::Type::Double));
         fields.append(QgsField(QStringLiteral("length"), QMetaType::Type::Double));
       } else {
-      fields.append(QgsField(QStringLiteral("kind"), QMetaType::Type::QString));
-      fields.append(QgsField(QStringLiteral("period"), QMetaType::Type::QString));
-      fields.append(QgsField(QStringLiteral("artifact_no"), QMetaType::Type::QString));
-      fields.append(QgsField(QStringLiteral("note"), QMetaType::Type::QString));
+        fields.append(QgsField(QStringLiteral("kind"), QMetaType::Type::QString));
+        fields.append(QgsField(QStringLiteral("period"), QMetaType::Type::QString));
+        fields.append(QgsField(QStringLiteral("artifact_no"), QMetaType::Type::QString));
+        fields.append(QgsField(QStringLiteral("note"), QMetaType::Type::QString));
       }
       mem.dataProvider()->addAttributes(fields.toList());
       mem.updateFields();
@@ -1602,11 +1549,10 @@ QgsVectorLayer* LayerOps::ensureDomainLayer(QgsProject* project, const QString& 
       opts.fileEncoding = QStringLiteral("UTF-8");
       opts.actionOnExistingFile = QgsVectorFileWriter::CreateOrOverwriteLayer;
       QString errMsg, newFn, newLayer;
-      if (QgsVectorFileWriter::writeAsVectorFormatV3(
-              &mem, gpkgPath, project->transformContext(), opts, &errMsg, &newFn, &newLayer) ==
-          QgsVectorFileWriter::NoError) {
-        vl = new QgsVectorLayer(QStringLiteral("%1|layername=%2").arg(gpkgPath, layerKey),
-                                titleKo, QStringLiteral("ogr"));
+      if (QgsVectorFileWriter::writeAsVectorFormatV3(&mem, gpkgPath, project->transformContext(), opts, &errMsg, &newFn,
+                                                     &newLayer) == QgsVectorFileWriter::NoError) {
+        vl = new QgsVectorLayer(QStringLiteral("%1|layername=%2").arg(gpkgPath, layerKey), titleKo,
+                                QStringLiteral("ogr"));
       } else if (errorOut) {
         *errorOut = errMsg;
       }
@@ -1620,14 +1566,12 @@ QgsVectorLayer* LayerOps::ensureDomainLayer(QgsProject* project, const QString& 
   }
   // OGR/GPKG keeps a feature cache. A previous legend-only delete leaves the
   // table; without reload, 「조사구역」 다시 만들기가 지운 면을 그대로 보여 준다.
-  if (QgsDataProvider* p = vl->dataProvider())
-    p->reloadData();
+  if (QgsDataProvider* p = vl->dataProvider()) p->reloadData();
   vl->updateExtents();
   vl->setName(titleKo);
   markSurveyLayer(vl, layerKey);
   applyLegendCrsLabel(vl);
-  if (!loadGpkgDefaultStyle(vl))
-    applyDomainDrawStyle(vl, layerKey);
+  if (!loadGpkgDefaultStyle(vl)) applyDomainDrawStyle(vl, layerKey);
   project->addMapLayer(vl, true);
   pruneEmptyLegendGroups(project);
   return vl;
@@ -1655,13 +1599,11 @@ QString kaGpkgLayerNameFromSource(const QString& source) {
   return rest;
 }
 
-bool kaSourcePointsAtGpkgTable(const QgsMapLayer* layer, const QString& gpkgPath,
-                               const QString& table) {
+bool kaSourcePointsAtGpkgTable(const QgsMapLayer* layer, const QString& gpkgPath, const QString& table) {
   if (!layer) return false;
   const QString src = layer->source();
   const QString file = src.section(QLatin1Char('|'), 0, 0);
-  if (QFileInfo(file).absoluteFilePath().compare(QFileInfo(gpkgPath).absoluteFilePath(),
-                                                 Qt::CaseInsensitive) != 0)
+  if (QFileInfo(file).absoluteFilePath().compare(QFileInfo(gpkgPath).absoluteFilePath(), Qt::CaseInsensitive) != 0)
     return false;
   return kaGpkgLayerNameFromSource(src).compare(table, Qt::CaseInsensitive) == 0;
 }
@@ -1669,19 +1611,17 @@ bool kaSourcePointsAtGpkgTable(const QgsMapLayer* layer, const QString& gpkgPath
 QStringList kaListGpkgFeatureTables(const QString& gpkgPath) {
   QStringList names;
   if (gpkgPath.isEmpty() || !QFileInfo::exists(gpkgPath)) return names;
-  GDALDatasetH ds = GDALOpenEx(gpkgPath.toUtf8().constData(), GDAL_OF_VECTOR, nullptr, nullptr,
-                               nullptr);
+  GDALDatasetH ds = GDALOpenEx(gpkgPath.toUtf8().constData(), GDAL_OF_VECTOR, nullptr, nullptr, nullptr);
   if (!ds) return names;
-  OGRLayerH res = GDALDatasetExecuteSQL(
-      ds, "SELECT table_name FROM gpkg_contents WHERE data_type='features'", nullptr, nullptr);
+  OGRLayerH res =
+      GDALDatasetExecuteSQL(ds, "SELECT table_name FROM gpkg_contents WHERE data_type='features'", nullptr, nullptr);
   if (res) {
     OGRFeatureH f = nullptr;
     while ((f = OGR_L_GetNextFeature(res)) != nullptr) {
       const char* v = OGR_F_GetFieldAsString(f, 0);
       if (v && *v) {
         const QString name = QString::fromUtf8(v);
-        if (!kaIsGpkgMetadataTable(name))
-          names.append(name);
+        if (!kaIsGpkgMetadataTable(name)) names.append(name);
       }
       OGR_F_Destroy(f);
     }
@@ -1691,13 +1631,11 @@ QStringList kaListGpkgFeatureTables(const QString& gpkgPath) {
   return names;
 }
 
-QgsVectorLayer* kaFindExistingSavedLayer(QgsProject* project, const QString& gpkgPath,
-                                         const QString& table) {
+QgsVectorLayer* kaFindExistingSavedLayer(QgsProject* project, const QString& gpkgPath, const QString& table) {
   for (QgsMapLayer* ml : project->mapLayers()) {
     auto* vl = qobject_cast<QgsVectorLayer*>(ml);
     if (!vl) continue;
-    if (kaSourcePointsAtGpkgTable(vl, gpkgPath, table))
-      return vl;
+    if (kaSourcePointsAtGpkgTable(vl, gpkgPath, table)) return vl;
   }
   // 조사 파일을 옮기거나 이름을 바꾸면 내장 작업공간이 적어 둔 상대경로(./옛이름.gpkg)가
   // 깨져 저장된 벡터가 전부 invalid 로 열린다.
@@ -1715,10 +1653,8 @@ QgsVectorLayer* kaFindExistingSavedLayer(QgsProject* project, const QString& gpk
     if (!vl || vl->isValid()) continue;
     if (vl->providerType().compare(QLatin1String("ogr"), Qt::CaseInsensitive) != 0) continue;
     const QString src = vl->source();
-    if (!src.section(QLatin1Char('|'), 0, 0).endsWith(QLatin1String(".gpkg"), Qt::CaseInsensitive))
-      continue;
-    if (kaGpkgLayerNameFromSource(src).compare(table, Qt::CaseInsensitive) == 0)
-      return vl;
+    if (!src.section(QLatin1Char('|'), 0, 0).endsWith(QLatin1String(".gpkg"), Qt::CaseInsensitive)) continue;
+    if (kaGpkgLayerNameFromSource(src).compare(table, Qt::CaseInsensitive) == 0) return vl;
   }
   return nullptr;
 }
@@ -1741,8 +1677,7 @@ bool kaSourceIsSurveyGpkg(const QgsMapLayer* layer, const QString& gpkgPath) {
   if (!layer || gpkgPath.isEmpty()) return false;
   const QString file = layer->source().section(QLatin1Char('|'), 0, 0);
   if (file.isEmpty()) return false;
-  return QFileInfo(file).absoluteFilePath().compare(QFileInfo(gpkgPath).absoluteFilePath(),
-                                                    Qt::CaseInsensitive) == 0;
+  return QFileInfo(file).absoluteFilePath().compare(QFileInfo(gpkgPath).absoluteFilePath(), Qt::CaseInsensitive) == 0;
 }
 
 QString kaSavedGpkgLayerTitle(const QString& table) {
@@ -1760,30 +1695,25 @@ QString kaSavedGpkgLayerTitle(const QString& table) {
 }  // namespace
 
 bool LayerOps::loadGpkgDefaultStyle(QgsVectorLayer* layer) {
-  if (!layer || !layer->isValid())
-    return false;
+  if (!layer || !layer->isValid()) return false;
   bool ok = false;
   layer->loadDefaultStyle(ok);
-  if (ok)
-    return true;
+  if (ok) return true;
   ok = false;
   layer->loadNamedStyle(layer->source(), ok);
   return ok;
 }
 
 int LayerOps::saveGpkgDefaultStyles(QgsProject* project, const QString& gpkgPath) {
-  if (!project || gpkgPath.isEmpty())
-    return 0;
+  if (!project || gpkgPath.isEmpty()) return 0;
   int n = 0;
   for (QgsMapLayer* ml : project->mapLayers()) {
     auto* vl = qobject_cast<QgsVectorLayer*>(ml);
-    if (!vl || !vl->isValid())
-      continue;
-    if (!kaSourceIsSurveyGpkg(vl, gpkgPath))
-      continue;
+    if (!vl || !vl->isValid()) continue;
+    if (!kaSourceIsSurveyGpkg(vl, gpkgPath)) continue;
     QString err;
-    const QgsMapLayer::SaveStyleResults res = vl->saveStyleToDatabaseV2(
-        QStringLiteral("ka_hgis"), QString(), true, QString(), err);
+    const QgsMapLayer::SaveStyleResults res =
+        vl->saveStyleToDatabaseV2(QStringLiteral("ka_hgis"), QString(), true, QString(), err);
     if (!res.testFlag(QgsMapLayer::SaveStyleResult::DatabaseWriteFailed) &&
         !res.testFlag(QgsMapLayer::SaveStyleResult::QmlGenerationFailed))
       ++n;
@@ -1799,8 +1729,7 @@ int LayerOps::reloadSurveyGpkgReaders(QgsProject* project, const QString& gpkgPa
     if (!vl || vl->providerType().compare(QLatin1String("ogr"), Qt::CaseInsensitive) != 0) continue;
     if (!kaSourceIsSurveyGpkg(vl, gpkgPath)) continue;
     if (vl->isEditable() && vl->isModified()) continue;
-    if (QgsDataProvider* provider = vl->dataProvider())
-      provider->reloadData();
+    if (QgsDataProvider* provider = vl->dataProvider()) provider->reloadData();
     if (!vl->isValid()) {
       vl->setDataSource(vl->source(), vl->name(), vl->providerType());
     }
@@ -1817,19 +1746,16 @@ int LayerOps::restoreMissingLayerTreeNodes(QgsProject* project) {
   int restored = 0;
   for (const QString& id : project->mapLayers().keys()) {
     QgsMapLayer* layer = project->mapLayer(id);
-    if (layer && layer->isValid() && kaEnsureLayerTreeNode(project, layer))
-      ++restored;
+    if (layer && layer->isValid() && kaEnsureLayerTreeNode(project, layer)) ++restored;
   }
   for (QgsMapLayer* layer : project->mapLayers()) {
-    if (isCadastralLayer(layer))
-      placeCadastralLayer(project, layer);
+    if (isCadastralLayer(layer)) placeCadastralLayer(project, layer);
   }
   return restored;
 }
 
 int LayerOps::addNonEmptySavedGpkgLayers(QgsProject* project, const QString& gpkgPath) {
-  if (!project || gpkgPath.isEmpty())
-    return 0;
+  if (!project || gpkgPath.isEmpty()) return 0;
   int added = restoreMissingLayerTreeNodes(project);
   const QStringList domainKeys = domainLayerKeys();
   const QStringList tables = kaListGpkgFeatureTables(gpkgPath);
@@ -1842,12 +1768,10 @@ int LayerOps::addNonEmptySavedGpkgLayers(QgsProject* project, const QString& gpk
     if (!vl || vl->isValid()) continue;
     if (vl->providerType().compare(QLatin1String("ogr"), Qt::CaseInsensitive) != 0) continue;
     const QString src = vl->source();
-    if (!src.section(QLatin1Char('|'), 0, 0).endsWith(QLatin1String(".gpkg"), Qt::CaseInsensitive))
-      continue;
+    if (!src.section(QLatin1Char('|'), 0, 0).endsWith(QLatin1String(".gpkg"), Qt::CaseInsensitive)) continue;
     const QString table = kaGpkgLayerNameFromSource(src);
     if (table.isEmpty() || !tables.contains(table, Qt::CaseInsensitive)) continue;
-    vl->setDataSource(QStringLiteral("%1|layername=%2").arg(gpkgPath, table), vl->name(),
-                      QStringLiteral("ogr"));
+    vl->setDataSource(QStringLiteral("%1|layername=%2").arg(gpkgPath, table), vl->name(), QStringLiteral("ogr"));
     if (vl->isValid()) {
       vl->updateExtents();
       kaEnsureLayerTreeNode(project, vl);
@@ -1856,25 +1780,21 @@ int LayerOps::addNonEmptySavedGpkgLayers(QgsProject* project, const QString& gpk
   }
 
   for (const QString& table : tables) {
-    QgsVectorLayer probe(QStringLiteral("%1|layername=%2").arg(gpkgPath, table), table,
-                         QStringLiteral("ogr"));
-    if (!probe.isValid() || probe.featureCount() <= 0)
-      continue;
+    QgsVectorLayer probe(QStringLiteral("%1|layername=%2").arg(gpkgPath, table), table, QStringLiteral("ogr"));
+    if (!probe.isValid() || probe.featureCount() <= 0) continue;
 
     if (QgsVectorLayer* existing = kaFindExistingSavedLayer(project, gpkgPath, table)) {
       if (!existing->isValid()) {
         // 옮겨지거나 이름이 바뀐 조사 파일. 같은 테이블을 새 경로로 다시 물린다.
         // 지우고 새로 만들면 이름·색·라벨·범례 순서가 전부 공장 기본값으로 돌아간다.
-        existing->setDataSource(QStringLiteral("%1|layername=%2").arg(gpkgPath, table),
-                                existing->name(), QStringLiteral("ogr"));
+        existing->setDataSource(QStringLiteral("%1|layername=%2").arg(gpkgPath, table), existing->name(),
+                                QStringLiteral("ogr"));
       }
       if (existing->isValid()) {
-        if (QgsDataProvider* p = existing->dataProvider())
-          p->reloadData();
+        if (QgsDataProvider* p = existing->dataProvider()) p->reloadData();
         existing->updateExtents();
         if (existing->isValid() && existing->featureCount() > 0) {
-          if (kaEnsureLayerTreeNode(project, existing))
-            ++added;
+          if (kaEnsureLayerTreeNode(project, existing)) ++added;
           continue;
         }
       }
@@ -1891,20 +1811,18 @@ int LayerOps::addNonEmptySavedGpkgLayers(QgsProject* project, const QString& gpk
       continue;
     }
 
-    auto* vl = new QgsVectorLayer(QStringLiteral("%1|layername=%2").arg(gpkgPath, table), titleKo,
-                                  QStringLiteral("ogr"));
+    auto* vl =
+        new QgsVectorLayer(QStringLiteral("%1|layername=%2").arg(gpkgPath, table), titleKo, QStringLiteral("ogr"));
     if (!vl->isValid()) {
       delete vl;
       continue;
     }
-    if (QgsDataProvider* p = vl->dataProvider())
-      p->reloadData();
+    if (QgsDataProvider* p = vl->dataProvider()) p->reloadData();
     vl->updateExtents();
     vl->setName(titleKo);
     markSurveyLayer(vl, table);
     applyLegendCrsLabel(vl);
-    if (!loadGpkgDefaultStyle(vl))
-      applyAreaM2Labels(vl);
+    if (!loadGpkgDefaultStyle(vl)) applyAreaM2Labels(vl);
     project->addMapLayer(vl, true);
     placeInLegendGroup(project, vl, QString::fromUtf8(kGroupSurveyData));
     kaEnsureLayerTreeNode(project, vl);
@@ -1913,9 +1831,8 @@ int LayerOps::addNonEmptySavedGpkgLayers(QgsProject* project, const QString& gpk
   return added;
 }
 
-QgsVectorLayer* LayerOps::createUserPolygonLayer(QgsProject* project, const QString& gpkgPath,
-                                                 const QString& titleKo, const QString& crsAuthId,
-                                                 QString* errorOut) {
+QgsVectorLayer* LayerOps::createUserPolygonLayer(QgsProject* project, const QString& gpkgPath, const QString& titleKo,
+                                                 const QString& crsAuthId, QString* errorOut) {
   if (!project) {
     if (errorOut) *errorOut = QStringLiteral("프로젝트가 없습니다.");
     return nullptr;
@@ -1950,8 +1867,8 @@ QgsVectorLayer* LayerOps::createUserPolygonLayer(QgsProject* project, const QStr
     opts.fileEncoding = QStringLiteral("UTF-8");
     opts.actionOnExistingFile = QgsVectorFileWriter::CreateOrOverwriteLayer;
     QString errMsg, newFn, newLayer;
-    const auto we = QgsVectorFileWriter::writeAsVectorFormatV3(
-        &mem, gpkgPath, QgsCoordinateTransformContext(), opts, &errMsg, &newFn, &newLayer);
+    const auto we = QgsVectorFileWriter::writeAsVectorFormatV3(&mem, gpkgPath, QgsCoordinateTransformContext(), opts,
+                                                               &errMsg, &newFn, &newLayer);
     if (we != QgsVectorFileWriter::NoError) {
       if (errorOut) *errorOut = errMsg.isEmpty() ? QStringLiteral("GPKG에 레이어를 쓰지 못했습니다.") : errMsg;
       return nullptr;
@@ -1961,8 +1878,8 @@ QgsVectorLayer* LayerOps::createUserPolygonLayer(QgsProject* project, const QStr
     loadPath = QStringLiteral("Polygon?crs=%1").arg(crs.authid());
   }
 
-  auto* vl = new QgsVectorLayer(loadPath, titleKo, gpkgPath.isEmpty() ? QStringLiteral("memory")
-                                                                      : QStringLiteral("ogr"));
+  auto* vl =
+      new QgsVectorLayer(loadPath, titleKo, gpkgPath.isEmpty() ? QStringLiteral("memory") : QStringLiteral("ogr"));
   if (!vl->isValid()) {
     if (errorOut) *errorOut = vl->error().message();
     delete vl;
@@ -1991,8 +1908,7 @@ QList<QgsMapLayer*> LayerOps::visibleLayersPaintOrder(QgsProject* project) {
   if (ordered.isEmpty()) {
     const QMap<QString, QgsMapLayer*> all = project->mapLayers();
     for (auto it = all.constBegin(); it != all.constEnd(); ++it) {
-      if (it.value() && it.value()->isValid())
-        ordered.append(it.value());
+      if (it.value() && it.value()->isValid()) ordered.append(it.value());
     }
   }
 
@@ -2053,9 +1969,11 @@ QString LayerOps::layerCensus(QgsProject* project) {
                  .arg(checked ? 1 : 0)
                  .arg(count);
   };
-  for (QgsMapLayer* l : ordered) describe(l);
+  for (QgsMapLayer* l : ordered)
+    describe(l);
   // 범례에서 빠진 레이어도 빠짐없이 적는다 — 사라짐의 절반은 이 상태다.
-  for (QgsMapLayer* l : project->mapLayers()) describe(l);
+  for (QgsMapLayer* l : project->mapLayers())
+    describe(l);
   return QStringLiteral("총 %1 · %2").arg(parts.size()).arg(parts.join(QStringLiteral(" | ")));
 }
 
@@ -2075,29 +1993,24 @@ static QString kaRestoreDroppedHomeComponent(const QString& file) {
   return QDir::cleanPath(home + QLatin1Char('/') + rest);
 }
 
-static QString kaResolvePersistedSource(const QString& source, const QString& home,
-                                        const QString& surveyGpkg) {
+static QString kaResolvePersistedSource(const QString& source, const QString& home, const QString& surveyGpkg) {
   const int pipe = source.indexOf(QLatin1Char('|'));
   const QString file = pipe < 0 ? source : source.left(pipe);
   const QString extra = pipe < 0 ? QString() : source.mid(pipe);
   if (file.isEmpty()) return source;
-  const auto exists = [](const QString& path) {
-    return !path.isEmpty() && QFileInfo::exists(QDir::cleanPath(path));
-  };
+  const auto exists = [](const QString& path) { return !path.isEmpty() && QFileInfo::exists(QDir::cleanPath(path)); };
   if (exists(file)) return source;
-  if (const QString restored = kaRestoreDroppedHomeComponent(file); exists(restored))
-    return restored + extra;
+  if (const QString restored = kaRestoreDroppedHomeComponent(file); exists(restored)) return restored + extra;
   if (home.isEmpty()) return source;
   const QString fromHome = QDir::cleanPath(QDir(home).absoluteFilePath(file));
   if (exists(fromHome)) return fromHome + extra;
   // persistWorkspace가 .ka-survey-gen 하위에 쓰던 시절의 상대 경로.
-  const QString fromGenerationHome = QDir::cleanPath(
-      QDir(QDir(home).filePath(QStringLiteral(".ka-survey-gen-home"))).absoluteFilePath(file));
+  const QString fromGenerationHome =
+      QDir::cleanPath(QDir(QDir(home).filePath(QStringLiteral(".ka-survey-gen-home"))).absoluteFilePath(file));
   if (exists(fromGenerationHome)) return fromGenerationHome + extra;
   QString rel = file;
   for (int i = 0; i < 4; ++i) {
-    if (!rel.startsWith(QLatin1String("../")) && !rel.startsWith(QLatin1String("..\\")))
-      break;
+    if (!rel.startsWith(QLatin1String("../")) && !rel.startsWith(QLatin1String("..\\"))) break;
     rel = rel.mid(3);
     const QString stripped = QDir::cleanPath(QDir(home).absoluteFilePath(rel));
     if (exists(stripped)) return stripped + extra;
@@ -2106,8 +2019,7 @@ static QString kaResolvePersistedSource(const QString& source, const QString& ho
   // 경로는 조사 폴더에서 읽으면 한 칸 어긋난 절대 경로로 풀린다. 조사 폴더를 기준으로
   // 뒤쪽 조각부터(가장 구체적인 것부터) 같은 파일을 찾는다. 조사 폴더를 옮긴 경우도
   // 같은 방법으로 붙는다.
-  const QStringList parts =
-      QDir::fromNativeSeparators(file).split(QLatin1Char('/'), Qt::SkipEmptyParts);
+  const QStringList parts = QDir::fromNativeSeparators(file).split(QLatin1Char('/'), Qt::SkipEmptyParts);
   for (int start = 1; start < parts.size(); ++start) {
     const QString tail = QStringList(parts.mid(start)).join(QLatin1Char('/'));
     if (tail.isEmpty() || tail.startsWith(QLatin1String(".."))) continue;
@@ -2116,8 +2028,7 @@ static QString kaResolvePersistedSource(const QString& source, const QString& ho
   }
   // 저장 때 조사 파일 안으로 흡수된 레이어는 세대 파일 이름을 가리킨 채 남는다.
   // 테이블 이름이 있으면 조사 파일에서 같은 테이블을 찾게 한다.
-  if (!surveyGpkg.isEmpty() && exists(surveyGpkg) &&
-      extra.contains(QLatin1String("layername="), Qt::CaseInsensitive) &&
+  if (!surveyGpkg.isEmpty() && exists(surveyGpkg) && extra.contains(QLatin1String("layername="), Qt::CaseInsensitive) &&
       file.endsWith(QLatin1String(".gpkg"), Qt::CaseInsensitive))
     return QDir::cleanPath(surveyGpkg) + extra;
   return source;
@@ -2192,16 +2103,14 @@ int LayerOps::repairPersistedFileSources(QgsProject* project, bool throttled) {
       layer->setDataSource(original, layer->name(), provider);
       continue;
     }
-    if (auto* vector = qobject_cast<QgsVectorLayer*>(layer))
-      vector->updateExtents();
+    if (auto* vector = qobject_cast<QgsVectorLayer*>(layer)) vector->updateExtents();
     layer->triggerRepaint();
     ++n;
   }
   return n;
 }
 
-int LayerOps::reviveInvalidLayers(QgsProject* project, QStringList* revived,
-                                  QStringList* stillBroken) {
+int LayerOps::reviveInvalidLayers(QgsProject* project, QStringList* revived, QStringList* stillBroken) {
   if (!project) return 0;
   int n = 0;
   for (QgsMapLayer* l : project->mapLayers()) {
@@ -2228,8 +2137,7 @@ int LayerOps::reviveInvalidLayers(QgsProject* project, QStringList* revived,
       if (stillBroken) *stillBroken << l->name();
       continue;
     }
-    if (QgsDataProvider* p = l->dataProvider())
-      p->reloadData();
+    if (QgsDataProvider* p = l->dataProvider()) p->reloadData();
     if (!l->isValid()) {
       // 같은 URI로 다시 연다. GPKG에 쓰는 동안 끊긴 핸들은 이걸로 돌아온다.
       if (!fileBacked || QFileInfo::exists(file))
@@ -2239,8 +2147,7 @@ int LayerOps::reviveInvalidLayers(QgsProject* project, QStringList* revived,
     }
     if (l->isValid()) {
       LayerTreeRecovery::noteFound(l);
-      if (auto* v = qobject_cast<QgsVectorLayer*>(l))
-        v->updateExtents();
+      if (auto* v = qobject_cast<QgsVectorLayer*>(l)) v->updateExtents();
       l->triggerRepaint();
       if (revived) *revived << l->name();
       ++n;
@@ -2253,8 +2160,7 @@ int LayerOps::reviveInvalidLayers(QgsProject* project, QStringList* revived,
 
 void LayerOps::applyWheelZoomFactor(QgsMapCanvas* canvas) {
   QgsSettings().setValue(QStringLiteral("qgis/zoom_factor"), kWheelZoomFactor);
-  if (canvas)
-    canvas->setWheelFactor(kWheelZoomFactor);
+  if (canvas) canvas->setWheelFactor(kWheelZoomFactor);
 }
 
 void LayerOps::syncMapCanvas(QgsProject* project, QgsMapCanvas* canvas, bool zoomKorea) {
@@ -2283,16 +2189,13 @@ void LayerOps::syncMapCanvas(QgsProject* project, QgsMapCanvas* canvas, bool zoo
     canvas->setDestinationCrs(QgsCoordinateReferenceSystem(QStringLiteral("EPSG:5186")));
   LayerOps::ensureOtfEnabled(project, canvas, canvas->mapSettings().destinationCrs().authid());
 
-  if (layersChanged)
-    canvas->setLayers(visible);
+  if (layersChanged) canvas->setLayers(visible);
   canvas->setCachingEnabled(true);
   // QgsMapCanvas::setRenderFlag(true)는 이미 켜져 있어도 refresh()를 강제한다.
   // 여기가 레이어를 만질 때마다 불리므로 필요 없는 전체 렌더가 한 번씩 더 붙었다.
-  if (!canvas->renderFlag())
-    canvas->setRenderFlag(true);
+  if (!canvas->renderFlag()) canvas->setRenderFlag(true);
   const bool wasFrozen = canvas->isFrozen();
-  if (!wasFrozen)
-    canvas->freeze(false);
+  if (!wasFrozen) canvas->freeze(false);
   // XYZ + OTF(QgsRasterProjector) + parallel job: provider_wms deleteLater AV on Windows.
   // 병렬 렌더만 끈다 — 미리보기까지 끄면 화면을 끄는 동안 지도가 비어 깜빡인다.
   canvas->setParallelRenderingEnabled(false);
@@ -2303,25 +2206,21 @@ void LayerOps::syncMapCanvas(QgsProject* project, QgsMapCanvas* canvas, bool zoo
                              : QStringLiteral("EPSG:5186");
     LayerOps::applyKoreaMapLimits(project, canvas);
     QgsRectangle kr = LayerOps::koreaExtentForCrs(auth);
-    if (kr.isEmpty() || !kr.isFinite())
-      kr = LayerOps::koreaExtentForCrs(QStringLiteral("EPSG:3857"));
+    if (kr.isEmpty() || !kr.isFinite()) kr = LayerOps::koreaExtentForCrs(QStringLiteral("EPSG:3857"));
     if (!kr.isEmpty() && kr.isFinite()) {
       canvas->setExtent(kr);
       canvas->zoomToFeatureExtent(kr);
-      if (canvas->scale() > 3000000.0)
-        canvas->zoomScale(1200000.0, true);
+      if (canvas->scale() > 3000000.0) canvas->zoomScale(1200000.0, true);
     }
     LayerOps::clampCanvasToKorea(canvas);
   }
-  if ((layersChanged || zoomKorea) && !canvas->isDrawing())
-    canvas->refresh();
+  if ((layersChanged || zoomKorea) && !canvas->isDrawing()) canvas->refresh();
 }
 
 bool LayerOps::isolateAndZoomToLayer(QgsProject* project, QgsMapCanvas* canvas, QgsMapLayer* layer,
                                      bool keepReference) {
   if (!layer || !layer->isValid()) return false;
-  if (canvas && !zoomToLayerMax(canvas, layer))
-    return false;
+  if (canvas && !zoomToLayerMax(canvas, layer)) return false;
 
   if (project) {
     if (QgsLayerTree* root = project->layerTreeRoot()) {
@@ -2329,10 +2228,8 @@ bool LayerOps::isolateAndZoomToLayer(QgsProject* project, QgsMapCanvas* canvas, 
         if (!l) continue;
         QgsLayerTreeLayer* n = root->findLayer(l->id());
         if (!n) continue;
-        const bool show =
-            (l == layer) ||
-            (keepReference && !isReferenceLayer(layer) && !isCadastralLayer(layer) &&
-             (isReferenceLayer(l) || isCadastralLayer(l)));
+        const bool show = (l == layer) || (keepReference && !isReferenceLayer(layer) && !isCadastralLayer(layer) &&
+                                           (isReferenceLayer(l) || isCadastralLayer(l)));
         n->setItemVisibilityChecked(show);
       }
     }
@@ -2342,8 +2239,7 @@ bool LayerOps::isolateAndZoomToLayer(QgsProject* project, QgsMapCanvas* canvas, 
     vis.append(layer);
     if (project && keepReference && !isReferenceLayer(layer) && !isCadastralLayer(layer)) {
       for (QgsMapLayer* l : project->mapLayers()) {
-        if (l && l != layer && l->isValid() && (isReferenceLayer(l) || isCadastralLayer(l)))
-          vis.append(l);
+        if (l && l != layer && l->isValid() && (isReferenceLayer(l) || isCadastralLayer(l))) vis.append(l);
       }
     }
     canvas->setLayers(vis);
@@ -2376,8 +2272,7 @@ QgsVectorLayer* LayerOps::findImportedSiteLayer(QgsProject* project) {
     if (!v || !isImportedSiteLayer(v)) continue;
     if (!any) any = v;
     const QString n = v->name() + layerKeyOf(v);
-    if (n.contains(QStringLiteral("유적")))
-      return v;
+    if (n.contains(QStringLiteral("유적"))) return v;
     if (!named) named = v;
   }
   return named ? named : any;
@@ -2394,17 +2289,16 @@ bool LayerOps::ensureOtfEnabled(QgsProject* project, QgsMapCanvas* canvas, const
     project->setTransformContext(ctx);
     project->setCrs(crs);
   }
-  if (canvas)
-    canvas->setDestinationCrs(crs);
+  if (canvas) canvas->setDestinationCrs(crs);
   return true;
 }
 
-bool LayerOps::setWorkCrs(QgsProject* project, QgsMapCanvas* canvas, const QString& epsgAuthId,
-                          QString* errorOut, bool zoomKorea) {
+bool LayerOps::setWorkCrs(QgsProject* project, QgsMapCanvas* canvas, const QString& epsgAuthId, QString* errorOut,
+                          bool zoomKorea) {
   const QgsCoordinateReferenceSystem crs(epsgAuthId);
   if (!crs.isValid()) {
     if (errorOut)
-      *errorOut = QStringLiteral("작업 좌표계 %1을 확인할 수 없습니다. 폴더 전체(share\\proj)가 있는지 확인하세요.")
+      *errorOut = QStringLiteral("작업 좌표계 %1을 확인할 수 없습니다. 폴더 전체(share/proj)가 있는지 확인하세요.")
                       .arg(epsgAuthId);
     return false;
   }
@@ -2420,8 +2314,8 @@ bool LayerOps::setWorkCrs(QgsProject* project, QgsMapCanvas* canvas, const QStri
       zoomToKorea(canvas, epsgAuthId);
     } else if (!prev.isEmpty() && prevCrs.isValid() && prevCrs != crs) {
       try {
-        QgsCoordinateTransform xf(prevCrs, crs, project ? project->transformContext()
-                                                        : QgsCoordinateTransformContext());
+        QgsCoordinateTransform xf(prevCrs, crs,
+                                  project ? project->transformContext() : QgsCoordinateTransformContext());
         xf.setBallparkTransformsAreAppropriate(true);
         canvas->setExtent(xf.transformBoundingBox(prev));
       } catch (...) {
@@ -2436,21 +2330,19 @@ bool LayerOps::setWorkCrs(QgsProject* project, QgsMapCanvas* canvas, const QStri
   return true;
 }
 
-QString LayerOps::convertToShp5179(QgsVectorLayer* layer, const QString& outShpPath,
-                                   QgsProject* project, QString* errorOut, bool addToMap) {
+QString LayerOps::convertToShp5179(QgsVectorLayer* layer, const QString& outShpPath, QgsProject* project,
+                                   QString* errorOut, bool addToMap) {
   if (!layer || !layer->isValid()) {
     if (errorOut) *errorOut = QStringLiteral("Invalid layer");
     return {};
   }
   QString path = outShpPath;
-  if (!path.endsWith(QLatin1String(".shp"), Qt::CaseInsensitive))
-    path += QStringLiteral(".shp");
-  return reprojectVectorLayer(layer, QStringLiteral("EPSG:5179"), path, project, errorOut,
-                              addToMap);
+  if (!path.endsWith(QLatin1String(".shp"), Qt::CaseInsensitive)) path += QStringLiteral(".shp");
+  return reprojectVectorLayer(layer, QStringLiteral("EPSG:5179"), path, project, errorOut, addToMap);
 }
 
-QString LayerOps::convertFileToShp5179(const QString& inPath, const QString& outShpPath,
-                                       QgsProject* project, QString* errorOut, bool addToMap) {
+QString LayerOps::convertFileToShp5179(const QString& inPath, const QString& outShpPath, QgsProject* project,
+                                       QString* errorOut, bool addToMap) {
   if (!QFile::exists(inPath)) {
     if (errorOut) *errorOut = QStringLiteral("Input not found");
     return {};
@@ -2466,8 +2358,8 @@ QString LayerOps::convertFileToShp5179(const QString& inPath, const QString& out
   return out;
 }
 
-QString LayerOps::georeferenceImageSimple(const QString& imagePath, QgsVectorLayer* controlPoints,
-                                          QgsProject* project, QgsMapCanvas* canvas, QString* errorOut) {
+QString LayerOps::georeferenceImageSimple(const QString& imagePath, QgsVectorLayer* controlPoints, QgsProject* project,
+                                          QgsMapCanvas* canvas, QString* errorOut) {
   if (!QFile::exists(imagePath)) {
     if (errorOut) *errorOut = QStringLiteral("Image not found");
     return {};
@@ -2520,8 +2412,8 @@ QString LayerOps::georeferenceImageSimple(const QString& imagePath, QgsVectorLay
   }
 
   double rotA = 0, rotB = 0, rotD = 0, rotE = 0, ulx = 0, uly = 0;
-  const bool allPixel = std::all_of(gcps.begin(), gcps.end(), [](const Gcp& g) { return g.hasPixel; })
-                        && gcps.size() >= 2;
+  const bool allPixel =
+      std::all_of(gcps.begin(), gcps.end(), [](const Gcp& g) { return g.hasPixel; }) && gcps.size() >= 2;
 
   bool lsSolved = false;
   if (allPixel && gcps.size() >= 3) {
@@ -2529,14 +2421,21 @@ QString LayerOps::georeferenceImageSimple(const QString& imagePath, QgsVectorLay
     double sxX = 0, syX = 0, sX = 0, sxY = 0, syY = 0, sY = 0;
     for (const Gcp& g : gcps) {
       const double x = g.px, y = g.py;
-      sxx += x * x; sxy += x * y; sx += x;
-      syy += y * y; sy += y; sn += 1;
-      sxX += x * g.map.x(); syX += y * g.map.x(); sX += g.map.x();
-      sxY += x * g.map.y(); syY += y * g.map.y(); sY += g.map.y();
+      sxx += x * x;
+      sxy += x * y;
+      sx += x;
+      syy += y * y;
+      sy += y;
+      sn += 1;
+      sxX += x * g.map.x();
+      syX += y * g.map.x();
+      sX += g.map.x();
+      sxY += x * g.map.y();
+      syY += y * g.map.y();
+      sY += g.map.y();
     }
-    auto solve3 = [](double a11, double a12, double a13, double a21, double a22, double a23,
-                     double a31, double a32, double a33, double b1, double b2, double b3,
-                     double& x1, double& x2, double& x3) -> bool {
+    auto solve3 = [](double a11, double a12, double a13, double a21, double a22, double a23, double a31, double a32,
+                     double a33, double b1, double b2, double b3, double& x1, double& x2, double& x3) -> bool {
       const double det = a11 * (a22 * a33 - a23 * a32) - a12 * (a21 * a33 - a23 * a31) + a13 * (a21 * a32 - a22 * a31);
       if (std::abs(det) < 1e-18) return false;
       x1 = (b1 * (a22 * a33 - a23 * a32) - a12 * (b2 * a33 - a23 * b3) + a13 * (b2 * a32 - a22 * b3)) / det;
@@ -2545,9 +2444,12 @@ QString LayerOps::georeferenceImageSimple(const QString& imagePath, QgsVectorLay
       return true;
     };
     double a = 0, b = 0, c = 0, d = 0, e = 0, fpar = 0;
-    if (solve3(sxx, sxy, sx, sxy, syy, sy, sx, sy, sn, sxX, syX, sX, a, b, c)
-        && solve3(sxx, sxy, sx, sxy, syy, sy, sx, sy, sn, sxY, syY, sY, d, e, fpar)) {
-      rotA = a; rotB = b; rotD = d; rotE = e;
+    if (solve3(sxx, sxy, sx, sxy, syy, sy, sx, sy, sn, sxX, syX, sX, a, b, c) &&
+        solve3(sxx, sxy, sx, sxy, syy, sy, sx, sy, sn, sxY, syY, sY, d, e, fpar)) {
+      rotA = a;
+      rotB = b;
+      rotD = d;
+      rotE = e;
       ulx = c + 0.5 * (rotA + rotB);
       uly = fpar + 0.5 * (rotD + rotE);
       lsSolved = true;
@@ -2631,8 +2533,7 @@ bool stackCanRedo(QgsVectorLayer* layer) {
 
 template <typename Pred>
 QgsVectorLayer* firstMatchingSurveyLayer(QgsProject* project, QgsVectorLayer* preferred, Pred pred) {
-  if (pred(preferred) && !LayerOps::isReferenceLayer(preferred) &&
-      !LayerOps::isCadastralLayer(preferred))
+  if (pred(preferred) && !LayerOps::isReferenceLayer(preferred) && !LayerOps::isCadastralLayer(preferred))
     return preferred;
   if (!project) return nullptr;
   QgsLayerTree* root = project->layerTreeRoot();
@@ -2640,30 +2541,23 @@ QgsVectorLayer* firstMatchingSurveyLayer(QgsProject* project, QgsVectorLayer* pr
   const QList<QgsLayerTreeLayer*> nodes = root->findLayers();
   for (auto it = nodes.crbegin(); it != nodes.crend(); ++it) {
     auto* vector = qobject_cast<QgsVectorLayer*>((*it)->layer());
-    if (pred(vector) && !LayerOps::isReferenceLayer(vector) &&
-        !LayerOps::isCadastralLayer(vector))
-      return vector;
+    if (pred(vector) && !LayerOps::isReferenceLayer(vector) && !LayerOps::isCadastralLayer(vector)) return vector;
   }
   return nullptr;
 }
-}
+}  // namespace
 
-bool LayerOps::runEditCommand(QgsVectorLayer* layer, const QString& title,
-                              const std::function<bool()>& change, QString* errorOut) {
+bool LayerOps::runEditCommand(QgsVectorLayer* layer, const QString& title, const std::function<bool()>& change,
+                              QString* errorOut) {
   const auto fail = [&](const QString& text) {
     if (errorOut) *errorOut = text;
     return false;
   };
-  if (!layer || !layer->isValid())
-    return fail(QStringLiteral("도형이 있는 조사 레이어를 먼저 선택하세요."));
-  if (isCadastralLayer(layer))
-    return fail(QStringLiteral("지적도는 편집할 수 없습니다."));
-  if (isReferenceLayer(layer))
-    return fail(QStringLiteral("참조 지도는 편집할 수 없습니다."));
-  if (layer->isEditCommandActive())
-    return fail(QStringLiteral("진행 중인 도형 편집을 마친 뒤 다시 실행하세요."));
-  if (!change)
-    return fail(QStringLiteral("도형을 변경하지 못했습니다. 기존 편집은 유지됩니다."));
+  if (!layer || !layer->isValid()) return fail(QStringLiteral("도형이 있는 조사 레이어를 먼저 선택하세요."));
+  if (isCadastralLayer(layer)) return fail(QStringLiteral("지적도는 편집할 수 없습니다."));
+  if (isReferenceLayer(layer)) return fail(QStringLiteral("참조 지도는 편집할 수 없습니다."));
+  if (layer->isEditCommandActive()) return fail(QStringLiteral("진행 중인 도형 편집을 마친 뒤 다시 실행하세요."));
+  if (!change) return fail(QStringLiteral("도형을 변경하지 못했습니다. 기존 편집은 유지됩니다."));
   if (!layer->isEditable() && !layer->startEditing())
     return fail(QStringLiteral("편집을 시작하지 못했습니다. 파일의 쓰기 권한을 확인하세요."));
   layer->beginEditCommand(title);
@@ -2735,10 +2629,8 @@ bool LayerOps::undoCommittedFeature(QgsVectorLayer* layer, qint64 featureId, QSt
     layer->rollBack();
     return false;
   }
-  if (QgsDataProvider* p = layer->dataProvider())
-    p->reloadData();
-  if (startedHere)
-    layer->startEditing();
+  if (QgsDataProvider* p = layer->dataProvider()) p->reloadData();
+  if (startedHere) layer->startEditing();
   layer->updateExtents();
   layer->triggerRepaint();
   return true;
@@ -2773,10 +2665,8 @@ bool LayerOps::restoreDeletedFeature(QgsVectorLayer* layer, const QgsFeature& fe
     layer->rollBack();
     return false;
   }
-  if (QgsDataProvider* p = layer->dataProvider())
-    p->reloadData();
-  if (startedHere)
-    layer->startEditing();
+  if (QgsDataProvider* p = layer->dataProvider()) p->reloadData();
+  if (startedHere) layer->startEditing();
   layer->updateExtents();
   layer->triggerRepaint();
   return true;
@@ -2807,8 +2697,7 @@ bool LayerOps::purgeCommittedFeatures(QgsVectorLayer* layer, QString* errorOut) 
   }
   const QgsFeatureIds ids = layer->allFeatureIds();
   if (ids.isEmpty()) {
-    if (QgsDataProvider* p = layer->dataProvider())
-      p->reloadData();
+    if (QgsDataProvider* p = layer->dataProvider()) p->reloadData();
     layer->updateExtents();
     return true;
   }
@@ -2867,16 +2756,19 @@ void LayerOps::applySnapSettings(QgsProject* project, const SnapSettings& settin
     for (QgsMapLayer* layer : project->mapLayers()) {
       auto* vector = qobject_cast<QgsVectorLayer*>(layer);
       if (!vector || !vector->isValid()) continue;
-      cfg.setIndividualLayerSettings(vector, QgsSnappingConfig::IndividualLayerSettings(
-          isSnapSourceLayer(vector), types, tolerance, Qgis::MapToolUnit::Pixels));
+      cfg.setIndividualLayerSettings(
+          vector, QgsSnappingConfig::IndividualLayerSettings(isSnapSourceLayer(vector), types, tolerance,
+                                                             Qgis::MapToolUnit::Pixels));
     }
   }
-  project->writeEntry(QStringLiteral("ka_hgis"), QStringLiteral("snap_target"),
-                      settings.target == SnapTarget::CurrentLayer ? QStringLiteral("current")
-                                                                  : QStringLiteral("survey"));
+  project->writeEntry(
+      QStringLiteral("ka_hgis"), QStringLiteral("snap_target"),
+      settings.target == SnapTarget::CurrentLayer ? QStringLiteral("current") : QStringLiteral("survey"));
   project->setTopologicalEditing(settings.topological);
-  project->writeEntry(QStringLiteral("ka_hgis"), QStringLiteral("topological"), settings.topological ? QStringLiteral("1") : QStringLiteral("0"));
-  project->writeEntry(QStringLiteral("ka_hgis"), QStringLiteral("snap_chosen"), QStringLiteral("1"));  // from here on the stored on/off is this survey's own
+  project->writeEntry(QStringLiteral("ka_hgis"), QStringLiteral("topological"),
+                      settings.topological ? QStringLiteral("1") : QStringLiteral("0"));
+  project->writeEntry(QStringLiteral("ka_hgis"), QStringLiteral("snap_chosen"),
+                      QStringLiteral("1"));  // from here on the stored on/off is this survey's own
   project->setSnappingConfig(cfg);
 }
 
@@ -2884,12 +2776,12 @@ LayerOps::SnapSettings LayerOps::readSnapSettings(const QgsProject* project) {
   SnapSettings settings;
   if (!project) return settings;
   const QgsSnappingConfig cfg = project->snappingConfig();
-  settings.enabled = cfg.enabled() || project->readEntry(QStringLiteral("ka_hgis"), QStringLiteral("snap_chosen")).isEmpty();  // never chosen: 자석 starts on (QGIS's default is off)
+  settings.enabled = cfg.enabled() || project->readEntry(QStringLiteral("ka_hgis"), QStringLiteral("snap_chosen"))
+                                          .isEmpty();  // never chosen: 자석 starts on (QGIS's default is off)
   settings.tolerancePx = cfg.tolerance() > 0.0 ? cfg.tolerance() : 16.0;
-  const QString target = project->readEntry(QStringLiteral("ka_hgis"), QStringLiteral("snap_target"),
-                                            QStringLiteral("survey"));
-  settings.target = target == QLatin1String("current") ? SnapTarget::CurrentLayer
-                                                       : SnapTarget::SurveyLayers;
+  const QString target =
+      project->readEntry(QStringLiteral("ka_hgis"), QStringLiteral("snap_target"), QStringLiteral("survey"));
+  settings.target = target == QLatin1String("current") ? SnapTarget::CurrentLayer : SnapTarget::SurveyLayers;
   const QString topo = project->readEntry(QStringLiteral("ka_hgis"), QStringLiteral("topological"));
   settings.topological = topo.isEmpty() ? true : topo != QLatin1String("0");
   return settings;
@@ -2913,8 +2805,6 @@ bool LayerOps::removeConfirmedLayers(QgsProject* project, QgsMapCanvas* canvas, 
   for (const QString& id : layerIds) {
     project->removeMapLayer(id);
   }
-  if (canvas)
-    refreshCanvasIfIdle(canvas);
+  if (canvas) refreshCanvasIfIdle(canvas);
   return true;
 }
-

@@ -28,9 +28,7 @@ QList<FieldDef> withAudit(QList<FieldDef> fields) {
 QList<LayerDef> buildLayers() {
   QList<LayerDef> out;
   out.append({"survey_area", "Polygon",
-              withAudit({{"survey_name", kText, "조사명"},
-                         {"site_name", kText, "유적명"},
-                         {"note", kText, "비고"}})});
+              withAudit({{"survey_name", kText, "조사명"}, {"site_name", kText, "유적명"}, {"note", kText, "비고"}})});
   out.append({"feature_poly", "Polygon",
               withAudit({{"kind", kText, "유구종류"},
                          {"period", kText, "시대"},
@@ -88,12 +86,13 @@ QList<LayerDef> buildLayers() {
                          {"surveyor", kText, "조사자"},
                          {"surv_date", kText, "조사일"}})});
   // The trench grid is generated, not recorded by hand: no record or audit columns.
-  out.append({"trial_trench", "Polygon",
-              {{"name", kText, "이름"}, {"width", kReal, "폭"}, {"length", kReal, "길이"}}});
+  out.append({"trial_trench", "Polygon", {{"name", kText, "이름"}, {"width", kReal, "폭"}, {"length", kReal, "길이"}}});
   return out;
 }
 
-QByteArray utf8(const QString& text) { return text.toUtf8(); }
+QByteArray utf8(const QString& text) {
+  return text.toUtf8();
+}
 }  // namespace
 
 const QList<LayerDef>& layers() {
@@ -111,7 +110,8 @@ const LayerDef* layer(const QString& layerKey) {
 QgsFields fieldsFor(const QString& layerKey) {
   QgsFields fields;
   if (const LayerDef* def = layer(layerKey)) {
-    for (const FieldDef& field : def->fields) fields.append(QgsField(QString::fromUtf8(field.name), field.type));
+    for (const FieldDef& field : def->fields)
+      fields.append(QgsField(QString::fromUtf8(field.name), field.type));
   }
   return fields;
 }
@@ -133,9 +133,10 @@ QString labelKo(const QString& fieldName) {
 }
 
 int readVersion(const QString& gpkgPath) {
+  GDALAllRegister();
   const char* drivers[] = {"GPKG", nullptr};
-  GDALDatasetH ds = GDALOpenEx(utf8(gpkgPath).constData(), GDAL_OF_VECTOR | GDAL_OF_READONLY, drivers, nullptr,
-                               nullptr);
+  GDALDatasetH ds =
+      GDALOpenEx(utf8(gpkgPath).constData(), GDAL_OF_VECTOR | GDAL_OF_READONLY, drivers, nullptr, nullptr);
   if (!ds) return 0;
   const char* value = GDALGetMetadataItem(ds, kVersionMetadataItem, nullptr);
   const int version = value ? QByteArray(value).toInt() : 0;
@@ -144,9 +145,9 @@ int readVersion(const QString& gpkgPath) {
 }
 
 bool writeVersion(const QString& gpkgPath, int version, QString* errorOut) {
+  GDALAllRegister();
   const char* drivers[] = {"GPKG", nullptr};
-  GDALDatasetH ds =
-      GDALOpenEx(utf8(gpkgPath).constData(), GDAL_OF_VECTOR | GDAL_OF_UPDATE, drivers, nullptr, nullptr);
+  GDALDatasetH ds = GDALOpenEx(utf8(gpkgPath).constData(), GDAL_OF_VECTOR | GDAL_OF_UPDATE, drivers, nullptr, nullptr);
   if (!ds) {
     if (errorOut) *errorOut = QStringLiteral("조사 파일을 열지 못해 판 번호를 적지 못했습니다.");
     return false;
@@ -162,10 +163,10 @@ bool writeVersion(const QString& gpkgPath, int version, QString* errorOut) {
 }
 
 MigrationResult migrateGenerationCopy(const QString& gpkgPath) {
+  GDALAllRegister();
   MigrationResult result;
   const char* drivers[] = {"GPKG", nullptr};
-  GDALDatasetH ds =
-      GDALOpenEx(utf8(gpkgPath).constData(), GDAL_OF_VECTOR | GDAL_OF_UPDATE, drivers, nullptr, nullptr);
+  GDALDatasetH ds = GDALOpenEx(utf8(gpkgPath).constData(), GDAL_OF_VECTOR | GDAL_OF_UPDATE, drivers, nullptr, nullptr);
   if (!ds) {
     result.error = QStringLiteral("조사 파일 사본을 열지 못해 새 기록 항목을 더하지 못했습니다.");
     return result;
@@ -201,7 +202,8 @@ MigrationResult migrateGenerationCopy(const QString& gpkgPath) {
                            .arg(QString::fromUtf8(m.def->name), QString::fromUtf8(m.field->name));
         break;
       }
-      result.addedFields << QStringLiteral("%1.%2").arg(QString::fromUtf8(m.def->name), QString::fromUtf8(m.field->name));
+      result.addedFields << QStringLiteral("%1.%2").arg(QString::fromUtf8(m.def->name),
+                                                        QString::fromUtf8(m.field->name));
     }
     if (transaction && failed) {
       GDALDatasetRollbackTransaction(ds);

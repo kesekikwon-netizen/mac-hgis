@@ -15,12 +15,15 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
-#include <windows.h>
 #include <RestartManager.h>
+#include <windows.h>
 #pragma comment(lib, "Rstrtmgr.lib")
 #elif defined(Q_OS_UNIX)
+#include <cerrno>
 #include <cstdio>
+#include <cstring>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #endif
 
@@ -33,8 +36,8 @@ bool flushPathToDisk(const QString& path) {
   // FlushFileBuffers on any write handle writes every dirty page of that file.
   const QString native = QDir::toNativeSeparators(QFileInfo(path).absoluteFilePath());
   HANDLE handle = CreateFileW(reinterpret_cast<LPCWSTR>(native.utf16()), GENERIC_WRITE,
-                              FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
-                              OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+                              FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
+                              FILE_ATTRIBUTE_NORMAL, nullptr);
   if (handle == INVALID_HANDLE_VALUE) return false;
   const bool flushed = FlushFileBuffers(handle) != FALSE;
   CloseHandle(handle);
@@ -42,7 +45,11 @@ bool flushPathToDisk(const QString& path) {
 #elif defined(Q_OS_UNIX)
   const int fd = ::open(QFile::encodeName(path).constData(), O_WRONLY);
   if (fd < 0) return false;
+#if defined(__APPLE__)
+  const bool flushed = (::fcntl(fd, F_FULLFSYNC) == 0) || (::fsync(fd) == 0);
+#else
   const bool flushed = ::fsync(fd) == 0;
+#endif
   ::close(fd);
   return flushed;
 #else
@@ -65,14 +72,20 @@ bool isTransientLockError(quint32 nativeError) {
 #ifdef Q_OS_WIN
   return nativeError == ERROR_ACCESS_DENIED || nativeError == ERROR_SHARING_VIOLATION ||
          nativeError == ERROR_LOCK_VIOLATION;
+#elif defined(Q_OS_UNIX)
+  return nativeError == static_cast<quint32>(EACCES) || nativeError == static_cast<quint32>(EAGAIN) ||
+         nativeError == static_cast<quint32>(EBUSY)
+#ifdef ETXTBSY
+         || nativeError == static_cast<quint32>(ETXTBSY)
+#endif
+      ;
 #else
   Q_UNUSED(nativeError);
   return false;
 #endif
 }
 
-bool replaceFileDurably(const QString& from, const QString& to, quint32* nativeError,
-                        QString* errorText) {
+bool replaceFileDurably(const QString& from, const QString& to, quint32* nativeError, QString* errorText) {
   if (nativeError) *nativeError = 0;
 #ifdef Q_OS_WIN
   const QString source = QDir::toNativeSeparators(from);
@@ -85,17 +98,30 @@ bool replaceFileDurably(const QString& from, const QString& to, quint32* nativeE
   if (nativeError) *nativeError = static_cast<quint32>(code);
   if (errorText) {
     wchar_t* text = nullptr;
-    FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
-                       FORMAT_MESSAGE_IGNORE_INSERTS,
-                   nullptr, code, 0, reinterpret_cast<LPWSTR>(&text), 0, nullptr);
-    *errorText = text ? QString::fromWCharArray(text).trimmed()
-                      : QStringLiteral("교체 오류 %1").arg(static_cast<int>(code));
+    FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr,
+                   code, 0, reinterpret_cast<LPWSTR>(&text), 0, nullptr);
+    *errorText =
+        text ? QString::fromWCharArray(text).trimmed() : QStringLiteral("교체 오류 %1").arg(static_cast<int>(code));
     if (text) LocalFree(text);
   }
   return false;
 #elif defined(Q_OS_UNIX)
-  if (::rename(QFile::encodeName(from).constData(), QFile::encodeName(to).constData()) == 0) return true;
-  if (errorText) *errorText = QStringLiteral("이름을 바꾸지 못했습니다.");
+  if (::rename(QFile::encodeName(from).constData(), QFile::encodeName(to).constData()) == 0) {
+    const QString parentDir = QFileInfo(to).absolutePath();
+    const int dirFd = ::open(QFile::encodeName(parentDir).constData(), O_RDONLY);
+    if (dirFd >= 0) {
+#if defined(__APPLE__)
+      ::fcntl(dirFd, F_FULLFSYNC);
+#else
+      ::fsync(dirFd);
+#endif
+      ::close(dirFd);
+    }
+    return true;
+  }
+  const int err = errno;
+  if (nativeError) *nativeError = static_cast<quint32>(err);
+  if (errorText) *errorText = QString::fromLocal8Bit(strerror(err));
   return false;
 #else
   if (QFile::exists(to) && !QFile::remove(to)) {
@@ -129,8 +155,7 @@ bool copyFileDurably(const QString& source, const QString& target, QString* erro
   output.close();
   input.close();
   if (!flushed) return fail(QStringLiteral("사본을 디스크에 끝까지 기록하지 못했습니다."));
-  if (QFileInfo(target).size() != QFileInfo(source).size())
-    return fail(QStringLiteral("사본 크기가 원본과 다릅니다."));
+  if (QFileInfo(target).size() != QFileInfo(source).size()) return fail(QStringLiteral("사본 크기가 원본과 다릅니다."));
   return true;
 }
 
@@ -220,7 +245,16 @@ QString lockDiagnosis(const QString& path) {
   if (attributes == INVALID_FILE_ATTRIBUTES)
     text += QStringLiteral(" · 속성 확인 못 함");
   else
-    text += (attributes & FILE_ATTRIBUTE_READONLY) ? QStringLiteral(" · 읽기 전용") : QStringLiteral(" · 읽기 전용 아님");
+    text +=
+        (attributes & FILE_ATTRIBUTE_READONLY) ? QStringLiteral(" · 읽기 전용") : QStringLiteral(" · 읽기 전용 아님");
+#elif defined(Q_OS_UNIX)
+  struct stat st;
+  if (::stat(QFile::encodeName(path).constData(), &st) != 0) {
+    text += QStringLiteral(" · 속성 확인 못 함");
+  } else {
+    const bool readOnly = (st.st_mode & (S_IWUSR | S_IWGRP | S_IWOTH)) == 0;
+    text += readOnly ? QStringLiteral(" · 읽기 전용") : QStringLiteral(" · 읽기 전용 아님");
+  }
 #endif
   return text;
 }

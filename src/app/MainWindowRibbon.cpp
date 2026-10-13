@@ -1,227 +1,227 @@
-#include "MainWindow.h"
-#include "KaHgisVersion.h"
-#include <QDateTime>
-#include "KaStartupSplash.h"
-#include "KaLayerInformation.h"
-#include "KaWindowGeometry.h"
-#include "core/DemPresentation.h"
-#include "KaTheme.h"
-#include "KaThemeOptions.h"
-#include "KaUserError.h"
-#include "KaIcons.h"
-#include "KaMenuCaption.h"
-#include "KaCaptureMapTool.h"
-#include "KaAttributeMapTool.h"
-#include "KaAlignMapTool.h"
-#include "KaImageView.h"
-#include "KaDrawingStudio.h"
-#include "KaTerrain3dStudio.h"
-#include "KaTerrain3dLayoutStudio.h"
-#include "KaStartPage.h"
-#include "KaMeasureMapTool.h"
-#include "core/DemAnalyzer.h"
-#include "core/TilePackService.h"
-#include "core/TrenchGridGenerator.h"
 #include "KaAboveLabelsOverlay.h"
-#include "KaCanvasGridOverlay.h"
-#include "KaTrenchMoveTool.h"
-#include "KaFeatureSelectTool.h"
-#include "KaShellFocus.h"
-#include "KaShellUi.h"
-#include "KaStatusBar.h"
+#include "KaAlignMapTool.h"
+#include "KaAppBar.h"
+#include "KaAttributeMapTool.h"
 #include "KaBeginnerRibbon.h"
-#include "KaToolbarFit.h"
-#include "KaSnapSettingsWidget.h"
-#include "KaFeatureFormDialog.h"
-#include "KaFileBrowserPanel.h"
-#include "KaLayerOpacityRail.h"
+#include "KaCanvasGridOverlay.h"
+#include "KaCaptureMapTool.h"
 #include "KaCrashGuard.h"
-#include "KaReferenceDownloadJob.h"
-#include <QProgressDialog>
-#include <QElapsedTimer>
-#include <QScopeGuard>
-#include <exception>
-#include "KaTrenchDialog.h"
 #include "KaDemClassDialog.h"
-#include "KaTopographicBrowser.h"
-#include "KaTopographicImportDialog.h"
-#include "KaSurveyAreaDialog.h"
-#include "core/RecentSurveys.h"
-#include "core/KaSafeQgis.h"
-#include "core/SurveyStorage.h"
-#include "core/SurveySession.h"
-#include "core/GeorefService.h"
-#include "core/BufferAnalysis.h"
-#include "core/ChecklistEngine.h"
-#include "core/SurveyProjectFactory.h"
-#include "core/Terrain3dLayoutService.h"
-#include "core/LayerOps.h"
+#include "KaDrawingStudio.h"
+#include "KaFeatureFormDialog.h"
+#include "KaFeatureSelectTool.h"
+#include "KaFileBrowserPanel.h"
 #include "KaHeritageBrowser.h"
 #include "KaHeritageSetupDialogs.h"
+#include "KaHgisVersion.h"
+#include "KaIcons.h"
+#include "KaImageView.h"
+#include "KaLayerInformation.h"
+#include "KaLayerOpacityRail.h"
+#include "KaMapControls.h"
+#include "KaMeasureMapTool.h"
+#include "KaMenuCaption.h"
+#include "KaReferenceDownloadJob.h"
+#include "KaRegionLocator.h"
+#include "KaShellFocus.h"
+#include "KaShellUi.h"
+#include "KaSnapSettingsWidget.h"
+#include "KaStartPage.h"
+#include "KaStartupSplash.h"
+#include "KaStatusBar.h"
+#include "KaSurveyAreaDialog.h"
+#include "KaTerrain3dLayoutStudio.h"
+#include "KaTerrain3dStudio.h"
+#include "KaTheme.h"
+#include "KaThemeOptions.h"
+#include "KaToolbarFit.h"
+#include "KaTopographicBrowser.h"
+#include "KaTopographicImportDialog.h"
+#include "KaTrenchDialog.h"
+#include "KaTrenchMoveTool.h"
+#include "KaUserError.h"
+#include "KaWindowGeometry.h"
+#include "MainWindow.h"
+#include "core/AdminBoundaryService.h"
+#include "core/BufferAnalysis.h"
+#include "core/CadastralImport.h"
+#include "core/ChecklistEngine.h"
+#include "core/DemAnalyzer.h"
+#include "core/DemPresentation.h"
+#include "core/GeologyMapService.h"
+#include "core/GeorefService.h"
 #include "core/HeritageImport.h"
 #include "core/HeritageIntranetSettings.h"
 #include "core/HeritageRegionResolver.h"
 #include "core/HeritageStyle.h"
-#include "core/SoilMapService.h"
-#include "core/PaleoLandformService.h"
-#include "core/GeologyMapService.h"
-#include "core/RiverMapService.h"
-#include "core/VworldSettings.h"
-#include "core/LocationSearch.h"
-#include "core/CadastralImport.h"
+#include "core/KaSafeQgis.h"
 #include "core/KoreaRegionCatalog.h"
-#include "core/AdminBoundaryService.h"
-#include "KaRegionLocator.h"
-#include "KaAppBar.h"
-#include "KaMapControls.h"
+#include "core/LayerOps.h"
+#include "core/LocationSearch.h"
+#include "core/PaleoLandformService.h"
+#include "core/RecentSurveys.h"
+#include "core/RiverMapService.h"
+#include "core/SoilMapService.h"
+#include "core/SurveyProjectFactory.h"
+#include "core/SurveySession.h"
+#include "core/SurveyStorage.h"
+#include "core/Terrain3dLayoutService.h"
+#include "core/TilePackService.h"
+#include "core/TrenchGridGenerator.h"
+#include "core/VworldSettings.h"
 #include "core/WorkflowGuide.h"
+#include <exception>
+#include <QDateTime>
+#include <QElapsedTimer>
+#include <QProgressDialog>
+#include <QScopeGuard>
 
 #include <algorithm>
 #include <cmath>
 #include <functional>
-#include <QApplication>
-#include <QScreen>
-#include <QShowEvent>
-#include <QWindow>
-#include <QTimer>
-#include <QPointer>
-#include <QCursor>
 #include <QAction>
+#include <QApplication>
+#include <QCursor>
 #include <QDockWidget>
-#include <QScrollArea>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QInputDialog>
 #include <QLabel>
-#include <QTabBar>
-#include <QTabWidget>
 #include <QListWidget>
 #include <QListWidgetItem>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QPointer>
+#include <QScreen>
+#include <QScrollArea>
+#include <QShowEvent>
 #include <QStatusBar>
+#include <QTabBar>
+#include <QTabWidget>
+#include <QTimer>
 #include <QToolBar>
+#include <QWindow>
 
-#include <QVBoxLayout>
-#include <QWidget>
+#include <QAbstractItemView>
+#include <QAbstractSpinBox>
+#include <QAction>
+#include <QCheckBox>
+#include <QCloseEvent>
+#include <QColor>
+#include <QColorDialog>
+#include <QComboBox>
+#include <QCompleter>
+#include <QCoreApplication>
+#include <QDesktopServices>
 #include <QDialog>
 #include <QDialogButtonBox>
-#include <QLineEdit>
-#include <QComboBox>
-#include <QCoreApplication>
 #include <QDir>
-#include <QTextStream>
-#include <QFile>
-#include <QShortcut>
-#include <QKeySequence>
-#include <QKeySequence>
-#include <QAbstractItemView>
-#include <QMenu>
-#include <QPixmap>
-#include <QImage>
-#include <QAction>
-#include <QSize>
-#include <QListWidgetItem>
-#include <QToolBar>
-#include <QAction>
-#include <QToolButton>
-#include <QKeyEvent>
-#include <QEvent>
-#include <QMouseEvent>
-#include <QModelIndex>
-#include <QItemSelectionModel>
-#include <QCompleter>
-#include <QStringListModel>
-#include <QInputDialog>
-#include <QVector>
-#include <QPair>
-#include <QTextEdit>
-#include <QPlainTextEdit>
-#include <QPushButton>
-#include <QRegularExpression>
-#include <QCloseEvent>
-#include <QSettings>
-#include <QScopedValueRollback>
-#include <QListWidget>
-#include <QListWidgetItem>
-#include <QSplitter>
-#include <QFrame>
-#include <QStandardPaths>
-#include <QColor>
-#include <QPalette>
-#include <QUrl>
-#include <QDesktopServices>
-#include <QSizePolicy>
-#include <QMimeData>
+#include <QDoubleSpinBox>
 #include <QDrag>
 #include <QDragEnterEvent>
 #include <QDropEvent>
+#include <QEvent>
+#include <QFile>
+#include <QFrame>
 #include <QHBoxLayout>
-#include <QStorageInfo>
 #include <QHash>
-#include <QMetaType>
-#include <QColorDialog>
-#include <QDoubleSpinBox>
-#include <QSpinBox>
-#include <QAbstractSpinBox>
-#include <QCheckBox>
-#include <QLocale>
+#include <QImage>
+#include <QInputDialog>
+#include <QItemSelectionModel>
+#include <QKeyEvent>
+#include <QKeySequence>
 #include <QLayout>
+#include <QLineEdit>
+#include <QListWidget>
+#include <QListWidgetItem>
+#include <QLocale>
+#include <QMenu>
+#include <QMetaType>
+#include <QMimeData>
+#include <QModelIndex>
+#include <QMouseEvent>
+#include <QPair>
+#include <QPalette>
+#include <QPixmap>
+#include <QPlainTextEdit>
+#include <QPushButton>
+#include <QRegularExpression>
+#include <QScopedValueRollback>
+#include <QSettings>
+#include <QShortcut>
+#include <QSize>
+#include <QSizePolicy>
+#include <QSpinBox>
+#include <QSplitter>
+#include <QStandardPaths>
+#include <QStorageInfo>
+#include <QStringListModel>
+#include <QTextEdit>
+#include <QTextStream>
+#include <QToolBar>
+#include <QToolButton>
+#include <QUrl>
+#include <QVBoxLayout>
+#include <QVector>
+#include <QWidget>
 
 #if KA_HGIS_HAS_QGIS
-#include <qgsmapcanvas.h>
-#include <qgsmapmouseevent.h>
-#include <qgsmessagebar.h>
-#include <qgsproject.h>
-#include <qgsmaplayerstyle.h>
-#include <qgsmaplayer.h>
-#include <qgsvectorlayer.h>
-#include <qgsrasterlayer.h>
-#include <qgssinglebandpseudocolorrenderer.h>
-#include <qgsrasterrenderer.h>
-#include <qgsrastertransparency.h>
-#include <qgslayertree.h>
-#include <qgslayertreegroup.h>
-#include <qgslayertreenode.h>
-#include <qgslayertreelayer.h>
-#include <qgslayertreeview.h>
-#include <qgslayertreemodel.h>
-#include <qgslayertreemapcanvasbridge.h>
-#include <qgscoordinatereferencesystem.h>
-#include <qgsmaptool.h>
-#include <qgsmaptoolemitpoint.h>
-#include <qgspointxy.h>
-#include <qgsmaptoolpan.h>
-#include <qgsmaptoolselect.h>
-#include <qgssnappingconfig.h>
-#include <qgssnappingutils.h>
-#include <qgsrubberband.h>
 #include <qgsapplication.h>
-#include <qgsmessagelog.h>
+#include <qgscoordinatereferencesystem.h>
+#include <qgscoordinatetransform.h>
+#include <qgscoordinatetransformcontext.h>
+#include <qgsexception.h>
 #include <qgsfeature.h>
 #include <qgsfeatureiterator.h>
 #include <qgsgeometry.h>
-#include <qgspointxy.h>
-#include <qgsvectorfilewriter.h>
-#include <qgscoordinatetransform.h>
-#include <qgscoordinatetransformcontext.h>
-#include <qgsrectangle.h>
-#include <qgsvertexmarker.h>
+#include <qgslayertree.h>
+#include <qgslayertreegroup.h>
+#include <qgslayertreelayer.h>
+#include <qgslayertreemapcanvasbridge.h>
+#include <qgslayertreemodel.h>
+#include <qgslayertreenode.h>
+#include <qgslayertreeview.h>
+#include <qgsmapcanvas.h>
+#include <qgsmaplayer.h>
+#include <qgsmaplayerstyle.h>
+#include <qgsmapmouseevent.h>
+#include <qgsmaptool.h>
+#include <qgsmaptoolemitpoint.h>
+#include <qgsmaptoolpan.h>
+#include <qgsmaptoolselect.h>
 #include <qgsmaptopixel.h>
+#include <qgsmessagebar.h>
+#include <qgsmessagelog.h>
+#include <qgsnetworkaccessmanager.h>
 #include <qgspoint.h>
 #include <qgspointlocator.h>
-#include <qgsexception.h>
+#include <qgspointxy.h>
+#include <qgsproject.h>
 #include <qgsproviderregistry.h>
-#include <qgsnetworkaccessmanager.h>
-#include <qgsvectordataprovider.h>
 #include <qgsprovidersublayerdetails.h>
+#include <qgsrasterlayer.h>
+#include <qgsrasterrenderer.h>
+#include <qgsrastertransparency.h>
+#include <qgsrectangle.h>
+#include <qgsrubberband.h>
+#include <qgssinglebandpseudocolorrenderer.h>
+#include <qgssnappingconfig.h>
+#include <qgssnappingutils.h>
+#include <qgsvectordataprovider.h>
+#include <qgsvectorfilewriter.h>
+#include <qgsvectorlayer.h>
+#include <qgsvertexmarker.h>
 #endif
 
 void MainWindow::buildMenus() {
+#if defined(Q_OS_MACOS) || defined(Q_OS_DARWIN)
+  menuBar()->setNativeMenuBar(true);
+#else
   menuBar()->setNativeMenuBar(false);
   menuBar()->hide();
+#endif
 
   auto* mainTb = addToolBar(QStringLiteral("주요"));
   mainTb->setObjectName(QStringLiteral("mainToolbar"));
@@ -234,8 +234,7 @@ void MainWindow::buildMenus() {
   // Place search joins the ribbon row at its right end (added after the ribbon below).
   // As a bar of its own it cost a whole row and ended up sharing the drawing tools' row.
   m_appBar = new KaAppBar(mainTb);
-  connect(m_appBar, &KaAppBar::searchRequested, this,
-          [this](const QString& q, bool lot) { searchLocation(q, lot); });
+  connect(m_appBar, &KaAppBar::searchRequested, this, [this](const QString& q, bool lot) { searchLocation(q, lot); });
   auto* actFind = new QAction(QStringLiteral("주소·지번 찾기"), this);
   actFind->setShortcut(QKeySequence::Find);
   actFind->setShortcutContext(Qt::WindowShortcut);
@@ -252,8 +251,8 @@ void MainWindow::buildMenus() {
   ribbon->addGroup(QStringLiteral("out"), QStringLiteral("내보내기"));
   ribbon->addGroup(QStringLiteral("more"), QStringLiteral("기타"));
 
-  auto addIcon = [this, ribbon](const QString& group, const QString& iconId, const QString& text,
-                                const QString& tip, auto slot) -> QPair<QAction*, QToolButton*> {
+  auto addIcon = [this, ribbon](const QString& group, const QString& iconId, const QString& text, const QString& tip,
+                                auto slot) -> QPair<QAction*, QToolButton*> {
     auto* a = new QAction(KaIcons::icon(iconId), text, this);
     a->setToolTip(tip);
     connect(a, &QAction::triggered, this, slot);
@@ -266,44 +265,35 @@ void MainWindow::buildMenus() {
     if (a) a->setIcon(KaIcons::strongIcon(iconId));
   };
   // 홈 화면·안내문이 모두 「새 조사」라고 부르므로 리본도 같은 이름을 쓴다.
-  auto [actNew, btnNew] = addIcon(QStringLiteral("survey"), QStringLiteral("new"),
-                                  QStringLiteral("새 조사"),
-                                  QStringLiteral("현장 조사 프로젝트를 새로 만듭니다"),
-                                  &MainWindow::newSurvey);
-  auto [actOpen, btnOpen] = addIcon(QStringLiteral("survey"), QStringLiteral("open"),
-                                    QStringLiteral("열기"),
+  auto [actNew, btnNew] = addIcon(QStringLiteral("survey"), QStringLiteral("new"), QStringLiteral("새 조사"),
+                                  QStringLiteral("현장 조사 프로젝트를 새로 만듭니다"), &MainWindow::newSurvey);
+  auto [actOpen, btnOpen] = addIcon(QStringLiteral("survey"), QStringLiteral("open"), QStringLiteral("열기"),
                                     QStringLiteral("저장한 조사를 엽니다"), &MainWindow::openProject);
-  auto [actSave, btnSave] = addIcon(QStringLiteral("survey"), QStringLiteral("save"),
-                                    QStringLiteral("저장"),
+  auto [actSave, btnSave] = addIcon(QStringLiteral("survey"), QStringLiteral("save"), QStringLiteral("저장"),
                                     QStringLiteral("현재 조사를 저장합니다 (Ctrl+S)"), &MainWindow::saveProject);
   actNew->setShortcut(QKeySequence::New);
   actNew->setToolTip(QStringLiteral("새 조사 — 현장 조사 프로젝트를 새로 만듭니다 (Ctrl+N)"));
   actOpen->setShortcut(QKeySequence::Open);
   actOpen->setToolTip(QStringLiteral("저장한 조사를 엽니다 (Ctrl+O)"));
   actSave->setShortcut(QKeySequence::Save);
-  auto [actSaveAs, btnSaveAs] = addIcon(QStringLiteral("survey"), QStringLiteral("save_as"),
-                                        QStringLiteral("다른 이름"),
-                                        QStringLiteral("작업 중인 모든 레이어를 다른 이름으로 저장합니다 (Ctrl+Shift+S)"),
-                                        &MainWindow::saveProjectAs);
+  auto [actSaveAs, btnSaveAs] = addIcon(
+      QStringLiteral("survey"), QStringLiteral("save_as"), QStringLiteral("다른 이름"),
+      QStringLiteral("작업 중인 모든 레이어를 다른 이름으로 저장합니다 (Ctrl+Shift+S)"), &MainWindow::saveProjectAs);
   actSaveAs->setShortcut(QKeySequence::SaveAs);
-  Q_UNUSED(actNew);
-  Q_UNUSED(actOpen);
   m_actSave = actSave;  // [P6] syncShellChips swaps this icon for save_unsaved (warn dot)
-  Q_UNUSED(actSaveAs);
   paintPrimary(actSave, QStringLiteral("save"));
   btnNew->setObjectName(QStringLiteral("ribbonNew"));
   btnOpen->setObjectName(QStringLiteral("ribbonOpen"));
   btnSave->setObjectName(QStringLiteral("ribbonSave"));
   btnSaveAs->setObjectName(QStringLiteral("ribbonSaveAs"));
 
-  auto [actSelect, btnSelect] = addIcon(
-      QStringLiteral("record"), QStringLiteral("select"), QStringLiteral("선택"),
-      QStringLiteral("그린 도형을 선택합니다. 다시 누르면 이동으로 돌아갑니다"),
-      &MainWindow::startSelectTool);
+  auto [actSelect, btnSelect] =
+      addIcon(QStringLiteral("record"), QStringLiteral("select"), QStringLiteral("선택"),
+              QStringLiteral("그린 도형을 선택합니다. 다시 누르면 이동으로 돌아갑니다"), &MainWindow::startSelectTool);
   m_actSelect = actSelect;
   Q_UNUSED(btnSelect);
   m_actSelect->setCheckable(true);
-  m_actSelect->setShortcut(QKeySequence(QStringLiteral("Ctrl+1")));
+  m_actSelect->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_1));
   // A = 도형선택, and the tooltip naming both keys. 맞추기 keeps the keyboard while it is open.
   KaFeatureSelectTool::installKeyShortcut(this, m_actSelect,
                                           [this]() { return m_subToolsMode == QLatin1String("align"); });
@@ -321,19 +311,15 @@ void MainWindow::buildMenus() {
   actRedo->setToolTip(QStringLiteral("되돌린 편집을 다시 적용합니다 (Ctrl+Y)"));
   actRedo->setShortcut(QKeySequence::Redo);
   actRedo->setShortcutContext(Qt::WindowShortcut);
-  connect(actRedo, &QAction::triggered, this, [this]() {
-    redoLastAction();
-  });
+  connect(actRedo, &QAction::triggered, this, [this]() { redoLastAction(); });
   addAction(actRedo);
   m_actRedo = actRedo;
-  auto [actMeasure, btnMeasure] = addIcon(
-      QStringLiteral("record"), QStringLiteral("measure"), QStringLiteral("측거"),
-      QStringLiteral("지도에서 거리와 면적을 측정합니다. 다시 누르면 종료합니다"),
-      &MainWindow::startMeasureTool);
+  auto [actMeasure, btnMeasure] = addIcon(QStringLiteral("record"), QStringLiteral("measure"), QStringLiteral("측거"),
+                                          QStringLiteral("지도에서 거리와 면적을 측정합니다. 다시 누르면 종료합니다"),
+                                          &MainWindow::startMeasureTool);
   m_actMeasure = actMeasure;
   Q_UNUSED(btnMeasure);
-  if (m_actMeasure)
-    m_actMeasure->setCheckable(true);
+  if (m_actMeasure) m_actMeasure->setCheckable(true);
 
   m_btnDraw = new QToolButton(ribbon);
   m_btnDraw->setObjectName(QStringLiteral("btnDraw"));
@@ -343,15 +329,16 @@ void MainWindow::buildMenus() {
   m_btnDraw->setCheckable(true);
   m_btnDraw->setToolTip(QStringLiteral("조사구역·유구 면과 선을 그립니다. 다시 누르면 도구를 닫고 이동합니다"));
   connect(m_btnDraw, &QToolButton::clicked, this, [this](bool on) {
-    if (on) showSubToolsDraw();
-    else hideSubTools();
+    if (on)
+      showSubToolsDraw();
+    else
+      hideSubTools();
     if (m_btnDraw)
-      m_btnDraw->setChecked(m_subToolbar && m_subToolbar->isVisible() &&
-                            m_subToolsMode == QLatin1String("draw"));
+      m_btnDraw->setChecked(m_subToolbar && m_subToolbar->isVisible() && m_subToolsMode == QLatin1String("draw"));
   });
   ribbon->addWidget(QStringLiteral("record"), m_btnDraw);
   auto* actDraw = new QAction(QStringLiteral("그리기"), this);
-  actDraw->setShortcut(QKeySequence(QStringLiteral("Ctrl+D")));
+  actDraw->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_D));
   actDraw->setShortcutContext(Qt::WindowShortcut);
   actDraw->setToolTip(QStringLiteral("조사구역·유구 면과 선을 그립니다 (Ctrl+D)"));
   connect(actDraw, &QAction::triggered, this, [this]() {
@@ -359,9 +346,11 @@ void MainWindow::buildMenus() {
   });
   addAction(actDraw);
 
-  auto trenchAdded = addIcon(QStringLiteral("record"), QStringLiteral("trench_grid"), QStringLiteral("시굴격자"),
-          QStringLiteral("조사구역이 있으면 바로 시굴격자를 놓고, 없으면 지도에서 놓을 자리를 누릅니다. 놓은 뒤에는 끌어 옮깁니다"),
-          &MainWindow::startTrenchGrid);
+  auto trenchAdded = addIcon(
+      QStringLiteral("record"), QStringLiteral("trench_grid"), QStringLiteral("시굴격자"),
+      QStringLiteral(
+          "조사구역이 있으면 바로 시굴격자를 놓고, 없으면 지도에서 놓을 자리를 누릅니다. 놓은 뒤에는 끌어 옮깁니다"),
+      &MainWindow::startTrenchGrid);
   trenchAdded.second->setObjectName(QStringLiteral("btnTrenchGrid"));
 
   // 지형·DEM·토양·고지형·지질·수계·옛 지도는 리본에 그대로 둔다.
@@ -371,23 +360,22 @@ void MainWindow::buildMenus() {
   m_btnTerrain->setText(QStringLiteral("지형"));
   m_btnTerrain->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
   m_btnTerrain->setCheckable(true);
-  m_btnTerrain->setToolTip(
-      QStringLiteral("등고·음영 지형도를 켭니다. 다시 누르면 숨깁니다"));
+  m_btnTerrain->setToolTip(QStringLiteral("등고·음영 지형도를 켭니다. 다시 누르면 숨깁니다"));
   connect(m_btnTerrain, &QToolButton::clicked, this, &MainWindow::toggleTerrainMap);
-  connect(m_btnTerrain, &QToolButton::clicked, this, [this]() {
-    QTimer::singleShot(0, this, [this]() { syncThematicButtons(); });
-  });
+  connect(m_btnTerrain, &QToolButton::clicked, this,
+          [this]() { QTimer::singleShot(0, this, [this]() { syncThematicButtons(); }); });
   ribbon->addWidget(QStringLiteral("basemap"), m_btnTerrain);
   auto* topographic = new QToolButton(ribbon);
   topographic->setObjectName(QStringLiteral("btnTopographic"));
   topographic->setIcon(KaIcons::icon(QStringLiteral("topo_download")));
   topographic->setText(QStringLiteral("수치지형"));
   topographic->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-  topographic->setToolTip(QStringLiteral(
-      "HGIS 안에서 국토지리정보원에 로그인하고 수치지형도를 받습니다. 우클릭: 받아 둔 폴더 불러오기"));
+  topographic->setToolTip(
+      QStringLiteral("HGIS 안에서 국토지리정보원에 로그인하고 수치지형도를 받습니다. 우클릭: 받아 둔 폴더 불러오기"));
   topographic->setPopupMode(QToolButton::MenuButtonPopup);
   auto* topographicMenu = new QMenu(topographic);
-  topographicMenu->addAction(QStringLiteral("국토지리정보원에서 내려받기…"), this, &MainWindow::openTopographicDownload);
+  topographicMenu->addAction(QStringLiteral("국토지리정보원에서 내려받기…"), this,
+                             &MainWindow::openTopographicDownload);
   topographicMenu->addAction(QStringLiteral("받아 둔 수치지형도 폴더…"), this, &MainWindow::importTopographicFolder);
   topographic->setMenu(topographicMenu);
   // The ribbon theme hides menu arrows, so the sub-menu opens on right-click like DEM and 토양.
@@ -407,23 +395,21 @@ void MainWindow::buildMenus() {
       "고도를 색으로 보여 줍니다. 받는 자료는 지표모델(DSM) 30m · Copernicus라 나무·건물 높이가 섞여 있습니다.\n"
       "미세지형 판독에는 우클릭 → 「국토지리원 DEM 불러오기」를 쓰세요. 다시 누르면 숨깁니다. 우클릭: 상세 메뉴"));
   auto* demMenu = new QMenu(m_btnDem);
-  demMenu->addAction(KaIcons::icon(QStringLiteral("dem")),
-                      QStringLiteral("국토지리원 DEM 불러오기(.img)…"), this,
-                      &MainWindow::importDemElevationRaster);
-  demMenu->addAction(KaIcons::icon(QStringLiteral("dem")), QStringLiteral("DEM 파일로 음영 만들기…"),
-                     this, &MainWindow::runDemHillshade);
+  demMenu->addAction(KaIcons::icon(QStringLiteral("dem")), QStringLiteral("국토지리원 DEM 불러오기(.img)…"), this,
+                     &MainWindow::importDemElevationRaster);
+  demMenu->addAction(KaIcons::icon(QStringLiteral("dem")), QStringLiteral("DEM 파일로 음영 만들기…"), this,
+                     &MainWindow::runDemHillshade);
   demMenu->addAction(KaIcons::icon(QStringLiteral("dem")), QStringLiteral("DEM 표현…"), this,
                      &MainWindow::editDemElevationClasses);
-  demMenu->addAction(KaIcons::icon(QStringLiteral("survey_contour")), QStringLiteral("측량점으로 등고선…"),
-                     this, &MainWindow::createSurveyContours);
+  demMenu->addAction(KaIcons::icon(QStringLiteral("survey_contour")), QStringLiteral("측량점으로 등고선…"), this,
+                     &MainWindow::createSurveyContours);
   m_btnDem->setMenu(demMenu);
   m_btnDem->setContextMenuPolicy(Qt::CustomContextMenu);
   connect(m_btnDem, &QToolButton::customContextMenuRequested, this,
           [this, demMenu](const QPoint& pos) { demMenu->exec(m_btnDem->mapToGlobal(pos)); });
   connect(m_btnDem, &QToolButton::clicked, this, &MainWindow::toggleDemMap);
-  connect(m_btnDem, &QToolButton::clicked, this, [this]() {
-    QTimer::singleShot(0, this, [this]() { syncThematicButtons(); });
-  });
+  connect(m_btnDem, &QToolButton::clicked, this,
+          [this]() { QTimer::singleShot(0, this, [this]() { syncThematicButtons(); }); });
   ribbon->addWidget(QStringLiteral("basemap"), m_btnDem);
   auto* contour = new QToolButton(ribbon);
   contour->setObjectName(QStringLiteral("btnSurveyContour"));
@@ -440,23 +426,19 @@ void MainWindow::buildMenus() {
   m_btnSoil->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
   m_btnSoil->setCheckable(true);
   m_btnSoil->setPopupMode(QToolButton::MenuButtonPopup);
-  m_btnSoil->setToolTip(
-      QStringLiteral("흙토람 토양도를 겹칩니다. 다시 누르면 숨깁니다. 우클릭: 상세 메뉴"));
+  m_btnSoil->setToolTip(QStringLiteral("흙토람 토양도를 겹칩니다. 다시 누르면 숨깁니다. 우클릭: 상세 메뉴"));
   auto* soilMenu = new QMenu(m_btnSoil);
-  soilMenu->addAction(KaIcons::icon(QStringLiteral("layer")),
-                      QStringLiteral("분포지형 내려받기 — 현재 화면 범위"), this,
-                      &MainWindow::downloadSoilTerrain);
-  soilMenu->addAction(KaIcons::icon(QStringLiteral("open")),
-                      QStringLiteral("토양도 파일 불러오기(SHP·GPKG)"), this,
+  soilMenu->addAction(KaIcons::icon(QStringLiteral("layer")), QStringLiteral("분포지형 내려받기 — 현재 화면 범위"),
+                      this, &MainWindow::downloadSoilTerrain);
+  soilMenu->addAction(KaIcons::icon(QStringLiteral("open")), QStringLiteral("토양도 파일 불러오기(SHP·GPKG)"), this,
                       &MainWindow::importSoilShapefile);
   m_btnSoil->setMenu(soilMenu);
   m_btnSoil->setContextMenuPolicy(Qt::CustomContextMenu);
   connect(m_btnSoil, &QToolButton::customContextMenuRequested, this,
           [this, soilMenu](const QPoint& pos) { soilMenu->exec(m_btnSoil->mapToGlobal(pos)); });
   connect(m_btnSoil, &QToolButton::clicked, this, &MainWindow::downloadSoilTerrain);
-  connect(m_btnSoil, &QToolButton::clicked, this, [this]() {
-    QTimer::singleShot(0, this, [this]() { syncThematicButtons(); });
-  });
+  connect(m_btnSoil, &QToolButton::clicked, this,
+          [this]() { QTimer::singleShot(0, this, [this]() { syncThematicButtons(); }); });
   ribbon->addWidget(QStringLiteral("basemap"), m_btnSoil);
   m_btnPaleo = new QToolButton(ribbon);
   m_btnPaleo->setObjectName(QStringLiteral("btnPaleo"));
@@ -467,10 +449,10 @@ void MainWindow::buildMenus() {
       QStringLiteral("흙토람 입지 후보를 강조하고 구하도·자연제방 등 가설을 그립니다. 확정이 아닙니다"));
   connect(m_btnPaleo, &QToolButton::clicked, this, &MainWindow::startPaleoLandform);
   ribbon->addWidget(QStringLiteral("basemap"), m_btnPaleo);
-  auto [actCadastral, btnCadastral] = addIcon(
-      QStringLiteral("fetch"), QStringLiteral("cadastral"), QStringLiteral("지적"),
-      QStringLiteral("조사구역 주변 5km 지적도를 받아 경계선과 지번을 표시합니다. 우클릭: 계정·선 색 설정"),
-      &MainWindow::downloadCadastral);
+  auto [actCadastral, btnCadastral] =
+      addIcon(QStringLiteral("fetch"), QStringLiteral("cadastral"), QStringLiteral("지적"),
+              QStringLiteral("조사구역 주변 5km 지적도를 받아 경계선과 지번을 표시합니다. 우클릭: 계정·선 색 설정"),
+              &MainWindow::downloadCadastral);
   actCadastral->setObjectName(QStringLiteral("actionCadastralDownload"));
   auto* cadastralMenu = new QMenu(btnCadastral);
   cadastralMenu->addAction(QStringLiteral("VWorld 계정 설정"), this, &MainWindow::configureCadastralAccount);
@@ -489,33 +471,30 @@ void MainWindow::buildMenus() {
   oldMaps->setPopupMode(QToolButton::InstantPopup);
   oldMaps->setToolTip(QStringLiteral("대동여지도와 1919년 조선지형도를 참조 지도로 올립니다"));
   auto* oldMenu = new QMenu(oldMaps);
-  auto* daedong = oldMenu->addAction(KaIcons::icon(QStringLiteral("old_map")), QStringLiteral("대동여지도"),
-                                    this, &MainWindow::addDaedongyeojidoMap);
+  auto* daedong = oldMenu->addAction(KaIcons::icon(QStringLiteral("old_map")), QStringLiteral("대동여지도"), this,
+                                     &MainWindow::addDaedongyeojidoMap);
   daedong->setObjectName(QStringLiteral("actionDaedongyeojido"));
-  auto* map1919 = oldMenu->addAction(KaIcons::icon(QStringLiteral("old_topo")),
-                                    QStringLiteral("1919 조선지형도 1:5만"),
-                                    this, &MainWindow::addHistoryGisMap1919);
+  auto* map1919 = oldMenu->addAction(KaIcons::icon(QStringLiteral("old_topo")), QStringLiteral("1919 조선지형도 1:5만"),
+                                     this, &MainWindow::addHistoryGisMap1919);
   map1919->setObjectName(QStringLiteral("actionMap1919"));
   oldMaps->setMenu(oldMenu);
-  auto [actGeology, btnGeology] = addIcon(
-      QStringLiteral("basemap"), QStringLiteral("geology"), QStringLiteral("지질"),
-      QStringLiteral("KIGAM 1:5만 지질 색 위에 지형 음영을 겹칩니다. 다시 누르면 숨깁니다"),
-      &MainWindow::downloadGeologyMap);
+  auto [actGeology, btnGeology] =
+      addIcon(QStringLiteral("basemap"), QStringLiteral("geology"), QStringLiteral("지질"),
+              QStringLiteral("KIGAM 1:5만 지질 색 위에 지형 음영을 겹칩니다. 다시 누르면 숨깁니다"),
+              &MainWindow::downloadGeologyMap);
   m_actGeology = actGeology;
   Q_UNUSED(btnGeology);
   if (m_actGeology) m_actGeology->setCheckable(true);
-  auto [actRiver, btnRiver] = addIcon(
-      QStringLiteral("basemap"), QStringLiteral("river"), QStringLiteral("수계"),
-      QStringLiteral("하천망을 겹칩니다. 다시 누르면 숨깁니다"),
-      &MainWindow::downloadRiverMap);
+  auto [actRiver, btnRiver] =
+      addIcon(QStringLiteral("basemap"), QStringLiteral("river"), QStringLiteral("수계"),
+              QStringLiteral("하천망을 겹칩니다. 다시 누르면 숨깁니다"), &MainWindow::downloadRiverMap);
   m_actRiver = actRiver;
   Q_UNUSED(btnRiver);
   if (m_actRiver) m_actRiver->setCheckable(true);
   for (QAction* thematic : {m_actGeology, m_actRiver}) {
     if (!thematic) continue;
-    connect(thematic, &QAction::triggered, this, [this]() {
-      QTimer::singleShot(0, this, [this]() { syncThematicButtons(); });
-    });
+    connect(thematic, &QAction::triggered, this,
+            [this]() { QTimer::singleShot(0, this, [this]() { syncThematicButtons(); }); });
   }
   ribbon->addWidget(QStringLiteral("basemap"), oldMaps);
   addIcon(QStringLiteral("align"), QStringLiteral("georef"), QStringLiteral("정합"),
@@ -529,10 +508,11 @@ void MainWindow::buildMenus() {
   btnBuffer->setCheckable(true);
   btnBuffer->setToolTip(QStringLiteral("주변유적 500M·1000M 표시하기 — 선택한 면 둘레에 거리 경계를 그립니다"));
   connect(btnBuffer, &QToolButton::clicked, this, [this, btnBuffer](bool on) {
-    if (on) showSubToolsBuffer();
-    else hideSubTools();
-    btnBuffer->setChecked(m_subToolbar && m_subToolbar->isVisible()
-                          && m_subToolsMode == QLatin1String("buffer"));
+    if (on)
+      showSubToolsBuffer();
+    else
+      hideSubTools();
+    btnBuffer->setChecked(m_subToolbar && m_subToolbar->isVisible() && m_subToolsMode == QLatin1String("buffer"));
   });
   ribbon->addWidget(QStringLiteral("record"), btnBuffer);
 
@@ -542,39 +522,41 @@ void MainWindow::buildMenus() {
   btnHeritage->setIcon(KaIcons::icon(QStringLiteral("heritage")));
   btnHeritage->setText(QStringLiteral("유산"));
   btnHeritage->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-  btnHeritage->setToolTip(QStringLiteral(
-      "조사구역이 속한 시·군의 국가유산 자료를 인트라넷에서 받아 참조 지도로 올립니다.\n"
-      "받은 자료는 조사폴더 안에만 두며 포터블·제출물에 실리지 않습니다"));
+  btnHeritage->setToolTip(
+      QStringLiteral("조사구역이 속한 시·군의 국가유산 자료를 인트라넷에서 받아 참조 지도로 올립니다.\n"
+                     "받은 자료는 조사폴더 안에만 두며 포터블·제출물에 실리지 않습니다"));
   connect(btnHeritage, &QToolButton::clicked, this, &MainWindow::fetchNearbyHeritage);
   ribbon->addWidget(QStringLiteral("fetch"), btnHeritage);
 
-  auto [actLayout, btnLayout] = addIcon(
-      QStringLiteral("out"), QStringLiteral("pdf"), QStringLiteral("도면"),
-      QStringLiteral("도면 만들기 — 종이에 지도를 올려 도면을 만듭니다 (Ctrl+L)"), &MainWindow::openLayoutDesigner);
-  actLayout->setShortcut(QKeySequence(QStringLiteral("Ctrl+L")));
+  auto [actLayout, btnLayout] = addIcon(QStringLiteral("out"), QStringLiteral("pdf"), QStringLiteral("도면"),
+                                        QStringLiteral("도면 만들기 — 종이에 지도를 올려 도면을 만듭니다 (Ctrl+L)"),
+                                        &MainWindow::openLayoutDesigner);
+  actLayout->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_L));
   Q_UNUSED(btnLayout);
   paintPrimary(actLayout, QStringLiteral("pdf"));
   // 인쇄는 사람들이 먼저 찾는 곳(첫 화면 리본)에도 둔다. 도면 화면 안의 「인쇄」와 같은 창을 연다.
-  auto [actPrint, btnPrint] = addIcon(
-      QStringLiteral("out"), QStringLiteral("print"), QStringLiteral("인쇄"),
-      QStringLiteral("도면을 프린터로 찍거나, 큰 도면을 A3·A4 여러 장으로 나눠 찍습니다 (Ctrl+P)"),
-      &MainWindow::printDrawing);
+  auto [actPrint, btnPrint] =
+      addIcon(QStringLiteral("out"), QStringLiteral("print"), QStringLiteral("인쇄"),
+              QStringLiteral("도면을 프린터로 찍거나, 큰 도면을 A3·A4 여러 장으로 나눠 찍습니다 (Ctrl+P)"),
+              &MainWindow::printDrawing);
   actPrint->setShortcut(QKeySequence::Print);
   btnPrint->setObjectName(QStringLiteral("btnRibbonPrint"));
   paintPrimary(actPrint, QStringLiteral("print"));
-  auto [actMapGeoTiff, btnMapGeoTiff] = addIcon(
-      QStringLiteral("out"), QStringLiteral("geotiff"), QStringLiteral("GeoTIFF"),
-      QStringLiteral("현재 지도에 보이는 범위와 레이어를 지도 좌표계 그대로 GeoTIFF로 저장합니다"),
-      &MainWindow::exportMapGeoTiff);
+  auto [actMapGeoTiff, btnMapGeoTiff] =
+      addIcon(QStringLiteral("out"), QStringLiteral("geotiff"), QStringLiteral("GeoTIFF"),
+              QStringLiteral("현재 지도에 보이는 범위와 레이어를 지도 좌표계 그대로 GeoTIFF로 저장합니다"),
+              &MainWindow::exportMapGeoTiff);
   m_actMapGeoTiff = actMapGeoTiff;
   m_actMapGeoTiff->setObjectName(QStringLiteral("actionMapGeoTiff"));
   KaShellUi::setEnabledWithReason(m_actMapGeoTiff, false, KaShellUi::mapTabOnlyReason());
   btnMapGeoTiff->setObjectName(QStringLiteral("btnMapGeoTiff"));
-  auto [actExport, btnExport] = addIcon(
-      QStringLiteral("out"), QStringLiteral("export_convert"), QStringLiteral("검수·제출"),
-      QStringLiteral("도면을 검수하고 제출 꾸러미(EPSG:5179 SHP·조사도면.pdf·MANIFEST)를 만듭니다. 오류는 고칠 곳을 보여 주고, 남은 채로 만들면 한 번 묻고 README에 적습니다. 레이어 하나만 바꾸는 「레이어 5179 변환」도 여기 있습니다 (Ctrl+E)."),
-      &MainWindow::openSubmitReview);
-  actExport->setShortcut(QKeySequence(QStringLiteral("Ctrl+E")));
+  auto [actExport, btnExport] =
+      addIcon(QStringLiteral("out"), QStringLiteral("export_convert"), QStringLiteral("검수·제출"),
+              QStringLiteral("도면을 검수하고 제출 꾸러미(EPSG:5179 SHP·조사도면.pdf·MANIFEST)를 만듭니다. 오류는 고칠 "
+                             "곳을 보여 주고, 남은 채로 만들면 한 번묻고 README에 적습니다. 레이어 하나만 바꾸는 "
+                             "「레이어 5179 변환」도 여기 있습니다 (Ctrl+E)."),
+              &MainWindow::openSubmitReview);
+  actExport->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
   Q_UNUSED(btnExport);
   ribbon->applyTabOrder();
 
@@ -592,10 +574,8 @@ void MainWindow::buildMenus() {
 
   auto* region = new KaRegionLocator(m_appBar);
   region->setObjectName(QStringLiteral("regionLocator"));
-  connect(region, &KaRegionLocator::searchRequested, this,
-          [this](const QString& q) { searchLocation(q); });
-  connect(region, &KaRegionLocator::parcelSearchRequested, this,
-          [this](const QString& q) { searchLocation(q, true); });
+  connect(region, &KaRegionLocator::searchRequested, this, [this](const QString& q) { searchLocation(q); });
+  connect(region, &KaRegionLocator::parcelSearchRequested, this, [this](const QString& q) { searchLocation(q, true); });
   connect(region, &KaRegionLocator::regionSelected, this, [this](const QString& sido) {
     const auto bounds = KoreaRegionCatalog::overviewBounds(sido);
     if (!bounds || m_isOpeningSurvey) return;
@@ -610,8 +590,10 @@ void MainWindow::buildMenus() {
     }
     LocationHit hit;
     hit.title = sido;
-    hit.west = bounds->west; hit.south = bounds->south;
-    hit.east = bounds->east; hit.north = bounds->north;
+    hit.west = bounds->west;
+    hit.south = bounds->south;
+    hit.east = bounds->east;
+    hit.north = bounds->north;
     hit.lon = (hit.west + hit.east) * 0.5;
     hit.lat = (hit.south + hit.north) * 0.5;
     hit.hasBbox = true;
@@ -626,29 +608,25 @@ void MainWindow::buildMenus() {
   more->setToolTip(QStringLiteral("가끔 쓰는 기능"));
   auto* moreMenu = new QMenu(more);
   QAction* loadGroup = moreMenu->addAction(KaIcons::icon(QStringLiteral("open")), QStringLiteral("벡터·도면 불러오기"),
-                                          this, &MainWindow::openVectorLayer);
-  moreMenu->addAction(KaIcons::icon(QStringLiteral("layer")),
-                      QStringLiteral("참조 벡터를 조사 파일 밖으로…"), this,
+                                           this, &MainWindow::openVectorLayer);
+  moreMenu->addAction(KaIcons::icon(QStringLiteral("layer")), QStringLiteral("참조 벡터를 조사 파일 밖으로…"), this,
                       &MainWindow::extractEmbeddedReferenceVectors);
   // [pkg D1] F114/F133: explicit, user-clicked cleanup of app staging left beside the survey.
-  moreMenu->addAction(KaIcons::icon(QStringLiteral("layer")),
-                      QStringLiteral("조사 폴더 임시 자료 정리…"), this,
+  moreMenu->addAction(KaIcons::icon(QStringLiteral("layer")), QStringLiteral("조사 폴더 임시 자료 정리…"), this,
                       &MainWindow::cleanSurveyStaging);
-  moreMenu->addAction(KaIcons::icon(QStringLiteral("layer")),
-                      QStringLiteral("토양도 SHP 불러오기"), this,
+  moreMenu->addAction(KaIcons::icon(QStringLiteral("layer")), QStringLiteral("토양도 SHP 불러오기"), this,
                       &MainWindow::importSoilShapefile);
-  moreMenu->addAction(KaIcons::icon(QStringLiteral("import")), QStringLiteral("CSV 기준점"),
-                      this, &MainWindow::importControlCsv);
-  moreMenu->addAction(KaIcons::icon(QStringLiteral("georef")), QStringLiteral("맞추기"),
-                      this, &MainWindow::georefAssistant);
-  moreMenu->addAction(KaIcons::icon(QStringLiteral("map")), QStringLiteral("OSM 배경"),
-                      this, &MainWindow::addBasemapOsm);
-  moreMenu->addAction(KaIcons::icon(QStringLiteral("satellite")), QStringLiteral("Google 위성"),
-                      this, &MainWindow::addBasemapGoogle);
+  moreMenu->addAction(KaIcons::icon(QStringLiteral("import")), QStringLiteral("CSV 기준점"), this,
+                      &MainWindow::importControlCsv);
+  moreMenu->addAction(KaIcons::icon(QStringLiteral("georef")), QStringLiteral("맞추기"), this,
+                      &MainWindow::georefAssistant);
+  moreMenu->addAction(KaIcons::icon(QStringLiteral("map")), QStringLiteral("OSM 배경"), this,
+                      &MainWindow::addBasemapOsm);
+  moreMenu->addAction(KaIcons::icon(QStringLiteral("satellite")), QStringLiteral("Google 위성"), this,
+                      &MainWindow::addBasemapGoogle);
   moreMenu->addSeparator();
   QAction* viewGroup = moreMenu->addAction(QStringLiteral("파일함 보이기/숨기기"), this, [this]() {
-    if (auto* toggle = findChild<QToolButton*>(QStringLiteral("sidebarFilesToggle")))
-      toggle->click();
+    if (auto* toggle = findChild<QToolButton*>(QStringLiteral("sidebarFilesToggle"))) toggle->click();
   });
   // 작은 화면에서 지도를 넓히는 선택 기능. 창 단축키라 리본이 숨어 있어도 듣는다.
   auto* actMapFocus = new QAction(QStringLiteral("지도 넓게 보기"), this);
@@ -666,8 +644,8 @@ void MainWindow::buildMenus() {
   actLeftPanel->setObjectName(QStringLiteral("actionToggleLeftPanel"));
   actLeftPanel->setShortcut(QKeySequence(KaShellFocus::leftPanelKey()));
   actLeftPanel->setShortcutContext(Qt::WindowShortcut);
-  actLeftPanel->setToolTip(QStringLiteral("레이어·파일함 패널을 접거나 다시 폅니다 (%1)")
-                               .arg(KaShellFocus::leftPanelKey()));
+  actLeftPanel->setToolTip(
+      QStringLiteral("레이어·파일함 패널을 접거나 다시 폅니다 (%1)").arg(KaShellFocus::leftPanelKey()));
   connect(actLeftPanel, &QAction::triggered, this, [this]() {
     if (m_shellFocus) m_shellFocus->toggleLeftPanel();
   });
@@ -678,8 +656,10 @@ void MainWindow::buildMenus() {
   moreMenu->addAction(QStringLiteral("수치지형도 아이디·비밀번호"), this, &MainWindow::configureTopographicAccount);
   moreMenu->addAction(QStringLiteral("국가유산 인트라넷 아이디·비밀번호"), this, &MainWindow::configureHeritageAccount);
   // [pkg G1] F060: read-only reference/offline readiness table, opened only on click.
-  moreMenu->addAction(KaIcons::icon(QStringLiteral("layer")), QStringLiteral("자료 준비 상태"), this,
-                      &MainWindow::showReferenceStatus)->setObjectName(QStringLiteral("actionReferenceStatus"));
+  moreMenu
+      ->addAction(KaIcons::icon(QStringLiteral("layer")), QStringLiteral("자료 준비 상태"), this,
+                  &MainWindow::showReferenceStatus)
+      ->setObjectName(QStringLiteral("actionReferenceStatus"));
   // [pkg H] F081/F153/F154: opt-in 「화면 보기」 (고대비·큰 글씨); the ribbon itself does not change.
   moreMenu->addMenu(KaTheme::createDisplayOptionsMenu(moreMenu));
   moreMenu->addAction(QStringLiteral("정보"), this, &MainWindow::showAbout);
@@ -687,9 +667,7 @@ void MainWindow::buildMenus() {
   webMenu->menuAction()->setObjectName(QStringLiteral("actionWebSources"));
   auto addWeb = [this, webMenu](const QString& iconId, const QString& text, const QString& url) {
     QAction* action = webMenu->addAction(KaIcons::icon(iconId), text);
-    QObject::connect(action, &QAction::triggered, this, [url]() {
-      QDesktopServices::openUrl(QUrl(url));
-    });
+    QObject::connect(action, &QAction::triggered, this, [url]() { QDesktopServices::openUrl(QUrl(url)); });
   };
   addWeb(QStringLiteral("upload"), QStringLiteral("문화재 GIS 인트라넷"),
          QStringLiteral("https://intranet.gis-heritage.go.kr/"));
@@ -700,11 +678,13 @@ void MainWindow::buildMenus() {
   addWeb(QStringLiteral("contour"), QStringLiteral("국토정보맵 지형도"),
          QStringLiteral("https://map.ngii.go.kr/ms/map/NlipMap.do"));
   webMenu->addSeparator();
-  webMenu->addAction(KaIcons::icon(QStringLiteral("layer")),
-                     QStringLiteral("토양도 SHP 불러오기(흙토람 다운로드)…"), this,
-                     &MainWindow::importSoilShapefile);
-  KaMenuCaption::install(moreMenu, {{QStringLiteral("불러오기·배경"), loadGroup}, {QStringLiteral("화면"), viewGroup},  // 보드 판 5
-      {QStringLiteral("계정과 키"), keyGroup}, {QStringLiteral("상태와 정보"), moreMenu->findChild<QAction*>(QStringLiteral("actionReferenceStatus"))}});
+  webMenu->addAction(KaIcons::icon(QStringLiteral("layer")), QStringLiteral("토양도 SHP 불러오기(흙토람 다운로드)…"),
+                     this, &MainWindow::importSoilShapefile);
+  KaMenuCaption::install(moreMenu, {{QStringLiteral("불러오기·배경"), loadGroup},
+                                    {QStringLiteral("화면"), viewGroup},  // 보드 판 5
+                                    {QStringLiteral("계정과 키"), keyGroup},
+                                    {QStringLiteral("상태와 정보"),
+                                     moreMenu->findChild<QAction*>(QStringLiteral("actionReferenceStatus"))}});
   more->setMenu(moreMenu);
   more->setPopupMode(QToolButton::InstantPopup);
   ribbon->addWidget(QStringLiteral("more"), more);
@@ -723,6 +703,35 @@ void MainWindow::buildMenus() {
   // Flat chrome: the QSS draws a 1px top/bottom rule for this row instead of a drop shadow.
   insertToolBarBreak(m_subToolbar);
   KaToolbarFit::install(m_subToolbar);  // no » fold: labels hide first, then the icons shrink
+
+  auto* actQuit = new QAction(QStringLiteral("종료"), this);
+  actQuit->setShortcut(QKeySequence::Quit);
+  connect(actQuit, &QAction::triggered, this, &QWidget::close);
+  addAction(actQuit);
+
+#if defined(Q_OS_MACOS) || defined(Q_OS_DARWIN)
+  auto* fileMenu = menuBar()->addMenu(QStringLiteral("파일"));
+  fileMenu->addAction(actNew);
+  fileMenu->addAction(actOpen);
+  fileMenu->addAction(actSave);
+  fileMenu->addAction(actSaveAs);
+  fileMenu->addSeparator();
+  fileMenu->addAction(actExport);
+  fileMenu->addAction(actLayout);
+  fileMenu->addSeparator();
+  fileMenu->addAction(actPrint);
+  fileMenu->addSeparator();
+  fileMenu->addAction(actQuit);
+
+  auto* editMenu = menuBar()->addMenu(QStringLiteral("편집"));
+  editMenu->addAction(actUndo);
+  editMenu->addAction(actRedo);
+  editMenu->addSeparator();
+  editMenu->addAction(m_actSelect);
+  editMenu->addAction(actDraw);
+  editMenu->addSeparator();
+  editMenu->addAction(actFind);
+#endif
 }
 
 void MainWindow::clearSubToolbar() {
@@ -767,10 +776,8 @@ void MainWindow::updateSubToolbarChecks() {
 
 void MainWindow::hideSubTools() {
 #if KA_HGIS_HAS_QGIS
-  if (m_subToolsMode == QLatin1String("align"))
-    stopAlignSession();
-  if (m_subToolsMode == QLatin1String("draw"))
-    stopCaptureTool();
+  if (m_subToolsMode == QLatin1String("align")) stopAlignSession();
+  if (m_subToolsMode == QLatin1String("draw")) stopCaptureTool();
   clearSubToolbar();
   if (m_subToolbar) m_subToolbar->setVisible(false);
   m_subToolsMode.clear();
@@ -794,27 +801,24 @@ void MainWindow::showSubToolsBuffer() {
   auto* lab = new QLabel(QStringLiteral("  주변유적경계 › "));
   lab->setObjectName(QStringLiteral("subToolbarCaption"));
   m_subToolbar->addWidget(lab);
-  m_subToolbar->addAction(KaIcons::icon(QStringLiteral("buffer")), QStringLiteral("500m"),
-                          this, &MainWindow::runSiteBuffer500);
-  m_subToolbar->addAction(KaIcons::icon(QStringLiteral("buffer")), QStringLiteral("1000m"),
-                          this, &MainWindow::runSiteBuffer1000);
+  m_subToolbar->addAction(KaIcons::icon(QStringLiteral("buffer")), QStringLiteral("500m"), this,
+                          &MainWindow::runSiteBuffer500);
+  m_subToolbar->addAction(KaIcons::icon(QStringLiteral("buffer")), QStringLiteral("1000m"), this,
+                          &MainWindow::runSiteBuffer1000);
   auto* closeAct = m_subToolbar->addAction(QStringLiteral("닫기"));
   connect(closeAct, &QAction::triggered, this, &MainWindow::hideSubTools);
   m_subToolbar->setVisible(true);
   statusBar()->showMessage(
-      QStringLiteral("면 레이어를 고른 뒤 500m 또는 1000m를 누르세요. 점선은 도형 색에서 바꿉니다."),
-      8000);
+      QStringLiteral("면 레이어를 고른 뒤 500m 또는 1000m를 누르세요. 점선은 도형 색에서 바꿉니다."), 8000);
 #endif
 }
 
 void MainWindow::runSiteBuffer500() {
 #if KA_HGIS_HAS_QGIS
-  QgsVectorLayer* layer = m_layerTree ? qobject_cast<QgsVectorLayer*>(m_layerTree->currentLayer())
-                                      : nullptr;
+  QgsVectorLayer* layer = m_layerTree ? qobject_cast<QgsVectorLayer*>(m_layerTree->currentLayer()) : nullptr;
   QString err;
   if (!BufferAnalysis::addDistanceRing(QgsProject::instance(), m_canvas, layer, 500.0, &err)) {
-    notify(Notice::Warning, QStringLiteral("주변유적경계"),
-           QStringLiteral("500m 경계를 그리지 못했습니다."), err);
+    notify(Notice::Warning, QStringLiteral("주변유적경계"), QStringLiteral("500m 경계를 그리지 못했습니다."), err);
     return;
   }
   statusBar()->showMessage(QStringLiteral("주변 500m 경계를 그렸습니다"), 6000);
@@ -823,12 +827,10 @@ void MainWindow::runSiteBuffer500() {
 
 void MainWindow::runSiteBuffer1000() {
 #if KA_HGIS_HAS_QGIS
-  QgsVectorLayer* layer = m_layerTree ? qobject_cast<QgsVectorLayer*>(m_layerTree->currentLayer())
-                                      : nullptr;
+  QgsVectorLayer* layer = m_layerTree ? qobject_cast<QgsVectorLayer*>(m_layerTree->currentLayer()) : nullptr;
   QString err;
   if (!BufferAnalysis::addDistanceRing(QgsProject::instance(), m_canvas, layer, 1000.0, &err)) {
-    notify(Notice::Warning, QStringLiteral("주변유적경계"),
-           QStringLiteral("1000m 경계를 그리지 못했습니다."), err);
+    notify(Notice::Warning, QStringLiteral("주변유적경계"), QStringLiteral("1000m 경계를 그리지 못했습니다."), err);
     return;
   }
   statusBar()->showMessage(QStringLiteral("주변 1000m 경계를 그렸습니다"), 6000);
@@ -843,16 +845,14 @@ void MainWindow::showSubToolsDraw() {
     hideSubTools();
     return;
   }
-  if (m_viewTabs && m_mapPage && m_viewTabs->currentWidget() != m_mapPage)
-    showMapWorkspace();
+  if (m_viewTabs && m_mapPage && m_viewTabs->currentWidget() != m_mapPage) showMapWorkspace();
   clearSubToolbar();
   m_subToolsMode = QStringLiteral("draw");
   auto* lab = new QLabel(QStringLiteral("  그리기 › "));
   lab->setObjectName(QStringLiteral("subToolbarCaption"));
   m_subToolbar->addWidget(lab);
-  auto* selAct = m_subToolbar->addAction(KaIcons::icon(QStringLiteral("select")),
-                                        QStringLiteral("도형선택"),
-                                        this, &MainWindow::startSelectTool);
+  auto* selAct = m_subToolbar->addAction(KaIcons::icon(QStringLiteral("select")), QStringLiteral("도형선택"), this,
+                                         &MainWindow::startSelectTool);
   selAct->setProperty("kaSubTool", QStringLiteral("select"));
   selAct->setToolTip(QStringLiteral(
       "도형을 클릭하면 수정점이 나옵니다.\n"
@@ -872,39 +872,32 @@ void MainWindow::showSubToolsDraw() {
                              4000);
   });
   m_subToolbar->addWidget(snap);
-  auto* easyAct = m_subToolbar->addAction(KaIcons::icon(QStringLiteral("easy_draw")),
-                                          QStringLiteral("쉽게그리기"),
+  auto* easyAct = m_subToolbar->addAction(KaIcons::icon(QStringLiteral("easy_draw")), QStringLiteral("쉽게그리기"),
                                           this, &MainWindow::startEasyDraw);
   easyAct->setProperty("kaSubTool", QStringLiteral("easy"));
-  easyAct->setToolTip(QStringLiteral(
-      "쉽게그리기 — 이미 찍은 점 가까이에 마우스를 가져가면 그 점에 딱 붙어 자동으로 찍힙니다.\n"
-      "잘못 찍었으면 Ctrl+Z를 누르세요. 바로 앞 점으로 되돌아갑니다."));
-  auto* areaAct = m_subToolbar->addAction(KaIcons::icon(QStringLiteral("draw_area")),
-                                          QStringLiteral("조사구역 그리기"),
+  easyAct->setToolTip(
+      QStringLiteral("쉽게그리기 — 이미 찍은 점 가까이에 마우스를 가져가면 그 점에 딱 붙어 자동으로 찍힙니다.\n"
+                     "잘못 찍었으면 Ctrl+Z를 누르세요. 바로 앞 점으로 되돌아갑니다."));
+  auto* areaAct = m_subToolbar->addAction(KaIcons::icon(QStringLiteral("draw_area")), QStringLiteral("조사구역 그리기"),
                                           this, &MainWindow::startEditSurveyArea);
   areaAct->setProperty("kaSubTool", QStringLiteral("area"));
-  areaAct->setToolTip(QStringLiteral(
-      "조사구역(발굴 범위) 면을 그립니다. 점을 차례로 찍고 Enter로 닫습니다.\n"
-      "Ctrl+Z는 마지막 점을 되돌립니다."));
-  auto* polyAct = m_subToolbar->addAction(KaIcons::icon(QStringLiteral("draw_poly")),
-                                          QStringLiteral("유구 그리기"),
+  areaAct->setToolTip(
+      QStringLiteral("조사구역(발굴 범위) 면을 그립니다. 점을 차례로 찍고 Enter로 닫습니다.\n"
+                     "Ctrl+Z는 마지막 점을 되돌립니다."));
+  auto* polyAct = m_subToolbar->addAction(KaIcons::icon(QStringLiteral("draw_poly")), QStringLiteral("유구 그리기"),
                                           this, &MainWindow::startEditFeaturePoly);
   polyAct->setProperty("kaSubTool", QStringLiteral("poly"));
-  polyAct->setToolTip(QStringLiteral(
-      "유구의 면(수혈·주거지 등)을 그립니다. 점을 차례로 찍고 Enter로 닫습니다.\n"
-      "Ctrl+Z는 마지막 점을 되돌립니다."));
-  auto* lineAct = m_subToolbar->addAction(KaIcons::icon(QStringLiteral("draw_line")),
-                                          QStringLiteral("유구 선"),
-                                          this, &MainWindow::startEditFeatureLine);
+  polyAct->setToolTip(
+      QStringLiteral("유구의 면(수혈·주거지 등)을 그립니다. 점을 차례로 찍고 Enter로 닫습니다.\n"
+                     "Ctrl+Z는 마지막 점을 되돌립니다."));
+  auto* lineAct = m_subToolbar->addAction(KaIcons::icon(QStringLiteral("draw_line")), QStringLiteral("유구 선"), this,
+                                          &MainWindow::startEditFeatureLine);
   lineAct->setProperty("kaSubTool", QStringLiteral("line"));
-  lineAct->setToolTip(QStringLiteral(
-      "유구의 선(석렬·구 등)을 그립니다. 점을 차례로 찍고 Enter로 끝냅니다."));
-  auto* artiAct = m_subToolbar->addAction(KaIcons::icon(QStringLiteral("artifact")),
-                                          QStringLiteral("유물위치표시"),
+  lineAct->setToolTip(QStringLiteral("유구의 선(석렬·구 등)을 그립니다. 점을 차례로 찍고 Enter로 끝냅니다."));
+  auto* artiAct = m_subToolbar->addAction(KaIcons::icon(QStringLiteral("artifact")), QStringLiteral("유물위치표시"),
                                           this, &MainWindow::startEditArtifact);
   artiAct->setProperty("kaSubTool", QStringLiteral("artifact"));
-  artiAct->setToolTip(QStringLiteral(
-      "유물이 나온 자리를 점으로 찍어 표시합니다. 한 번 클릭에 한 점입니다."));
+  artiAct->setToolTip(QStringLiteral("유물이 나온 자리를 점으로 찍어 표시합니다. 한 번 클릭에 한 점입니다."));
   addDrawSketchButtons();  // [pkg B1] F085/F150: 완료·되돌리기·취소 (only while sketching) + 연속 그리기
 
   // 폴리곤 묶기·나누기는 「그리는 도구」가 아니라 「이미 그린 면을 고치는 도구」다.
@@ -912,37 +905,34 @@ void MainWindow::showSubToolsDraw() {
   // 버튼과 너무 멀어져 한눈에 들어오지 않았다. 빈칸을 빼고 구분선만 두어
   // 그리기 버튼 바로 옆(가운데 쪽)에 묶기·나누기·구간 분리·겹친 곳 지우기·닫기를 같이 보이게 한다.
   m_subToolbar->addSeparator();
-  auto* mergeAct = m_subToolbar->addAction(QStringLiteral("폴리곤 묶기"),
-                                           this, &MainWindow::mergeFeaturePolygons);
-  mergeAct->setToolTip(QStringLiteral(
-      "여러 면을 하나로 묶습니다.\n"
-      "쓰는 법: [도형선택]을 누르고 Shift를 누른 채 지도에서 면을 두 개 이상 고른 뒤\n"
-      "[폴리곤 묶기]를 누르면 고른 면들이 하나로 합쳐집니다."));
-  auto* splitAct = m_subToolbar->addAction(QStringLiteral("폴리곤 나누기"),
-                                           this, &MainWindow::startSplitPolygonTool);
-  splitAct->setToolTip(QStringLiteral(
-      "[폴리곤 묶기]로 하나가 된 면을 다시 나눕니다.\n"
-      "쓰는 법: 면을 가로지르는 선을 클릭해 그리고 우클릭하면 그 선을 따라 갈라집니다.\n"
-      "(Shift로 도형 두 개를 고른 뒤 눌러도 겹친 구간에서 나뉩니다.)"));
-  auto* clipAct = m_subToolbar->addAction(QStringLiteral("구간 분리"),
-                                          this, &MainWindow::clipOverlappingLayers);
-  clipAct->setToolTip(QStringLiteral(
-      "겹쳐 있는 두 레이어에서 겹치는 구간만 새 레이어로 떼어 냅니다. 원본은 그대로 남습니다."));
-  auto* eraseAct = m_subToolbar->addAction(QStringLiteral("겹친 곳 지우기"),
-                                           this, &MainWindow::eraseOverlapWithShape);
+  auto* mergeAct = m_subToolbar->addAction(QStringLiteral("폴리곤 묶기"), this, &MainWindow::mergeFeaturePolygons);
+  mergeAct->setToolTip(
+      QStringLiteral("여러 면을 하나로 묶습니다.\n"
+                     "쓰는 법: [도형선택]을 누르고 Shift를 누른 채 지도에서 면을 두 개 이상 고른 뒤\n"
+                     "[폴리곤 묶기]를 누르면 고른 면들이 하나로 합쳐집니다."));
+  auto* splitAct = m_subToolbar->addAction(QStringLiteral("폴리곤 나누기"), this, &MainWindow::startSplitPolygonTool);
+  splitAct->setToolTip(
+      QStringLiteral("[폴리곤 묶기]로 하나가 된 면을 다시 나눕니다.\n"
+                     "쓰는 법: 면을 가로지르는 선을 클릭해 그리고 우클릭하면 그 선을 따라 갈라집니다.\n"
+                     "(Shift로 도형 두 개를 고른 뒤 눌러도 겹친 구간에서 나뉩니다.)"));
+  auto* clipAct = m_subToolbar->addAction(QStringLiteral("구간 분리"), this, &MainWindow::clipOverlappingLayers);
+  clipAct->setToolTip(
+      QStringLiteral("겹쳐 있는 두 레이어에서 겹치는 구간만 새 레이어로 떼어 냅니다. 원본은 그대로 남습니다."));
+  auto* eraseAct = m_subToolbar->addAction(QStringLiteral("겹친 곳 지우기"), this, &MainWindow::eraseOverlapWithShape);
   eraseAct->setObjectName(QStringLiteral("actEraseOverlap"));
-  eraseAct->setToolTip(QStringLiteral(
-      "위에 그린 도형 모양대로 아래 도형에서 그 자리만 지웁니다(클립).\n"
-      "쓰는 법: 같은 레이어의 도형 위에 겹쳐 그리고 우클릭으로 마치면 선택창에서 고를 수 있습니다.\n"
-      "이미 그린 도형은 [도형선택](A)으로 고른 뒤 이 단추를 누릅니다.\n"
-      "아래 도형에 구멍이 나고 위에 그린 도형은 없어집니다. Ctrl+Z로 되돌립니다."));
+  eraseAct->setToolTip(
+      QStringLiteral("위에 그린 도형 모양대로 아래 도형에서 그 자리만 지웁니다(클립).\n"
+                     "쓰는 법: 같은 레이어의 도형 위에 겹쳐 그리고 우클릭으로 마치면 선택창에서 고를 수 있습니다.\n"
+                     "이미 그린 도형은 [도형선택](A)으로 고른 뒤 이 단추를 누릅니다.\n"
+                     "아래 도형에 구멍이 나고 위에 그린 도형은 없어집니다. Ctrl+Z로 되돌립니다."));
   auto* closeAct = m_subToolbar->addAction(QStringLiteral("닫기"));
   closeAct->setToolTip(QStringLiteral("그리기 도구 모음을 닫고 지도 이동으로 돌아갑니다"));
   connect(closeAct, &QAction::triggered, this, &MainWindow::hideSubTools);
   m_subToolbar->setVisible(true);
   updateSubToolbarChecks();
   statusBar()->showMessage(
-      QStringLiteral("그릴 도구를 고르세요 — 조사구역·유구·유구 선·유물 가운데 하나를 누르면 그리기가 시작됩니다."), 8000);
+      QStringLiteral("그릴 도구를 고르세요 — 조사구역·유구·유구 선·유물 가운데 하나를 누르면 그리기가 시작됩니다."),
+      8000);
 #endif
 }
 
@@ -954,4 +944,3 @@ void MainWindow::showSubToolsBasemap() {
   statusBar()->showMessage(QStringLiteral("위성과 지적도는 시작할 때 자동으로 올라옵니다."), 6000);
 #endif
 }
-

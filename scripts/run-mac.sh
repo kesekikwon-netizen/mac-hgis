@@ -16,10 +16,11 @@ if [ ! -f "${BIN_PATH}" ]; then
   fi
 fi
 
-# Ensure GDAL and PROJ data paths are exported
+# Ensure GDAL, PROJ, and Qt plugin paths are exported
 export GDAL_DATA="${GDAL_DATA:-/opt/homebrew/share/gdal}"
 export PROJ_LIB="${PROJ_LIB:-/opt/homebrew/share/proj}"
 export QGIS_PREFIX_PATH="${QGIS_PREFIX_PATH:-/Applications/QGIS.app/Contents/MacOS}"
+export QT_PLUGIN_PATH="${QT_PLUGIN_PATH:-/opt/homebrew/share/qt/plugins}"
 
 if [ "${1:-}" = "--smoke-quit" ]; then
   echo "Running headless smoke-quit..."

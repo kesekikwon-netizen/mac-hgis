@@ -14,7 +14,15 @@
 #include <atomic>
 #include <cstdio>
 #include <cstring>
+#if defined(Q_OS_WIN)
 #include <io.h>
+#else
+#include <unistd.h>
+#define _dup dup
+#define _dup2 dup2
+#define _fileno fileno
+#define _close close
+#endif
 
 namespace {
 
@@ -27,9 +35,13 @@ QString sessionLog() {
   return QString::fromUtf8(log.readAll());
 }
 
-CPLErrorHandler currentHandler() { return CPLGetErrorHandler(nullptr); }
+CPLErrorHandler currentHandler() {
+  return CPLGetErrorHandler(nullptr);
+}
 
-void CPL_STDCALL spyPrevious(CPLErr, CPLErrorNum, const char*) { g_spyHits.fetch_add(1); }
+void CPL_STDCALL spyPrevious(CPLErr, CPLErrorNum, const char*) {
+  g_spyHits.fetch_add(1);
+}
 
 void CPL_STDCALL spyNested(CPLErr, CPLErrorNum, const char* message) {
   g_nestedHits.fetch_add(1);
@@ -41,7 +53,7 @@ void CPL_STDCALL spyNested(CPLErr, CPLErrorNum, const char* message) {
 
 class GdalErrorLogTest : public QObject {
   Q_OBJECT
-private slots:
+ private slots:
   void dumpHint_namesCrashDump() {
     const QString hint = KaCrashGuard::dumpHint();
     QVERIFY2(hint.contains(QStringLiteral(".dmp")), qPrintable(hint));
@@ -52,12 +64,11 @@ private slots:
   void onlyFailuresAreRecorded() {
     QVERIFY(KaGdalErrorLog::describe(CE_Warning, 1, QStringLiteral("Field width truncated")).isEmpty());
     QVERIFY(KaGdalErrorLog::describe(CE_Debug, 0, QStringLiteral("debug")).isEmpty());
-    QCOMPARE(KaGdalErrorLog::describe(CE_Failure, 1,
-                                      QStringLiteral("In GetNextRawFeature(): unable to open database file")),
-             QStringLiteral("[gdal] ERROR 1: In GetNextRawFeature(): unable to open database file"));
+    QCOMPARE(
+        KaGdalErrorLog::describe(CE_Failure, 1, QStringLiteral("In GetNextRawFeature(): unable to open database file")),
+        QStringLiteral("[gdal] ERROR 1: In GetNextRawFeature(): unable to open database file"));
     QVERIFY(KaGdalErrorLog::describe(CE_Fatal, 3, QStringLiteral("x")).startsWith(QStringLiteral("[gdal] FATAL 3")));
-    QCOMPARE(KaGdalErrorLog::describe(CE_Failure, 1, QStringLiteral("a\r\nb")),
-             QStringLiteral("[gdal] ERROR 1: a b"));
+    QCOMPARE(KaGdalErrorLog::describe(CE_Failure, 1, QStringLiteral("a\r\nb")), QStringLiteral("[gdal] ERROR 1: a b"));
   }
 
   void failuresReachTheSessionLogAndRepeatsFold() {
@@ -65,7 +76,8 @@ private slots:
     KaGdalErrorLog::install();  // a second install must not chain the handler to itself
     const char* flood = "In GetNextRawFeature(): sqlite3_step() : unable to open database file";
     CPLError(CE_Warning, CPLE_AppDefined, "%s", "warning noise");
-    for (int i = 0; i < 120; ++i) CPLError(CE_Failure, CPLE_AppDefined, "%s", flood);
+    for (int i = 0; i < 120; ++i)
+      CPLError(CE_Failure, CPLE_AppDefined, "%s", flood);
     CPLError(CE_Failure, CPLE_AppDefined, "%s", "a different failure");
 
     const QString text = sessionLog();
