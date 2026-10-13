@@ -1,4 +1,4 @@
-﻿# Build
+# Build
 build/
 build-clangd/
 out/
@@ -32,16 +32,12 @@ Desktop.ini
 .DS_Store
 
 # Local agent / tooling caches (not product source)
+.codegraph
 .codegraph/
 .omo/
 .opencode/
-.agents/*
-!.agents/skills/
-.agents/skills/*
-!.agents/skills/ka-hgis-gis/
-!.agents/skills/heritage-intranet/
-!.agents/skills/ka-hgis-sheet/
-!.agents/skills/ka-hgis-verify/
+!.agents/
+!.agents/**
 # Claude Code: share project config, keep per-PC state local
 .claude/*
 !.claude/settings.json

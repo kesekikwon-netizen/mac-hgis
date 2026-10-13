@@ -1,0 +1,17 @@
+{
+  "code-hygiene": {
+    "enabled": true,
+    "PostToolUse": [
+      {
+        "matcher": "replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "which clang-format >/dev/null && git diff --name-only | grep -E '\\.(cpp|h|mm)$' | xargs -r clang-format -i || true",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
